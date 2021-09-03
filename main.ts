@@ -2,6 +2,7 @@
 // Import discordjs library
 import { Client, Intents } from 'discord.js';
 import { CTSService, listVehicleStops } from './CTSService';
+import { emojiForStation } from './station_emojis';
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 
@@ -35,7 +36,12 @@ client.on("interactionCreate", async interaction => {
                     throw new Error("No station was provided");
                 }
                 let stops = await service.getStopsForStation(station);
-                let final = `__**Horaires pour la station *${station}***__\n`;
+                let final = `__**Horaires pour la station *${station}***__`;
+                let emoji = emojiForStation(station);
+                if (emoji !== null) {
+                    final += `  ${emoji}`;
+                }
+                final += "\n";
                 // Count the number of unique types of vehicles
                 let types = new Set();
                 for (let stop of stops) {

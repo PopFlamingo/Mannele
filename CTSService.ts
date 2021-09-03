@@ -225,7 +225,7 @@ export function listVehicleStops(vehicleStops: VehicleStop[]): string {
             }
 
             if (minutes === 0) {
-                departureStrings.push("Maintenant");
+                departureStrings.push("maintenant");
             } else if (minutes > 0) {
                 departureStrings.push(`${minutes} min`);
             }
