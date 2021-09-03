@@ -1,0 +1,24 @@
+{
+  "name": "ctsdiscordbot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node main.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^4.4.2"
+  },
+  "dependencies": {
+    "@discordjs/builders": "^0.5.0",
+    "@discordjs/rest": "^0.1.0-canary.0",
+    "axios": "^0.21.1",
+    "discord-api-types": "^0.22.0",
+    "discord.js": "^13.1.0"
+  }
+}
