@@ -72,16 +72,8 @@ client.on("interactionCreate", async interaction => {
     } catch(error) {
         console.error(error)
         interaction.reply(`Une erreur est survenue`);
-    }
-    
-    
-    
-   
-    
-    
+    } 
     let sub = interaction.options.getSubcommand();
-    
-
 })
 
 // Login to Discord
