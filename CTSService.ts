@@ -1,12 +1,13 @@
 import { CTSRequestsCacher } from "./CTSRequestsCacher";
 import { linesStations, stationCodes } from "./data";
-import * as fs from 'fs';
+import * as fs from "fs";
 
 const getKeyValue = (key: string) => (obj: Record<string, any>) => obj[key];
 
 // Create and export an enum that stores either tram or bus
 export enum TransportType {
-    tram = "tram", bus = "bus"
+    tram = "tram",
+    bus = "bus",
 }
 
 export class VehicleStop {
@@ -18,7 +19,14 @@ export class VehicleStop {
     departureDates: Date[];
 
     // Constructor
-    constructor(name: string, transportType: TransportType, directionRef: number, destinationName: string, via: string | null, departureDates: Date[]) {
+    constructor(
+        name: string,
+        transportType: TransportType,
+        directionRef: number,
+        destinationName: string,
+        via: string | null,
+        departureDates: Date[]
+    ) {
         this.name = name;
         this.transportType = transportType;
         this.directionRef = directionRef;
@@ -32,10 +40,10 @@ export class CTSService {
     constructor(token: string) {
         this.cacher = new CTSRequestsCacher(token);
     }
-    private cacher: CTSRequestsCacher
+    private cacher: CTSRequestsCacher;
 
     async getStopsForStation(stationName: string): Promise<VehicleStop[]> {
-        let url = "https://api.cts-strasbourg.eu/v1/siri/2.0/stop-monitoring"
+        let url = "https://api.cts-strasbourg.eu/v1/siri/2.0/stop-monitoring";
 
         // Check stationCodes[stationName] is not undefined, otherwise throw an error
         if (stationCodes[stationName] === undefined) {
@@ -46,7 +54,7 @@ export class CTSService {
         let codesList: string[] = [];
         // For each kind of transport
         for (let kind of kinds) {
-            let codes = stationCodes[stationName][kind]
+            let codes = stationCodes[stationName][kind];
             if (codes === undefined) {
                 continue;
             }
@@ -54,9 +62,8 @@ export class CTSService {
             codesList = codesList.concat(codes);
         }
 
-
         let first = true;
-        codesList.forEach(code => {
+        codesList.forEach((code) => {
             if (first) {
                 url += "?";
                 first = false;
@@ -65,7 +72,7 @@ export class CTSService {
             }
             url += `MonitoringRef=${code}`;
         });
-        
+
         let response = await this.cacher.sendRequest(url);
 
         // Make sure response is not empty
@@ -89,19 +96,28 @@ export class CTSService {
             throw new Error("More than one stop monitoring delivery");
         }
 
-
         let monitoredStopVisits = stopMonitoringDelivery[0].MonitoredStopVisit;
         // Check monitoredStopVisit is not undefined, otherwise throw an error
         if (monitoredStopVisits === undefined) {
             throw new Error("No monitored stop visit");
         }
 
-        let collector: { [key: string]: [Date[], string, string, string, number, string | null]} = {};
+        let collector: {
+            [key: string]: [
+                Date[],
+                string,
+                string,
+                string,
+                number,
+                string | null
+            ];
+        } = {};
 
         // For each element in the monitoredStopVisit array
-        monitoredStopVisits.forEach((monitoredStopVisit:any) => {
+        monitoredStopVisits.forEach((monitoredStopVisit: any) => {
             // Store the MonitoredVehicleJourney element and check it is not undefined
-            let monitoredVehicleJourney = monitoredStopVisit.MonitoredVehicleJourney;
+            let monitoredVehicleJourney =
+                monitoredStopVisit.MonitoredVehicleJourney;
             if (monitoredVehicleJourney === undefined) {
                 return;
             }
@@ -150,10 +166,9 @@ export class CTSService {
             // The ExpectedDepartureTime element is in a format like this:
             // "2020-05-01T12:00:00+02:00"
             let departureDate = new Date(expectedDepartureTime);
-            
 
             let data = [publishedLineName, destinationName, via];
-            
+
             let viaForKey = via;
             // If via is null replace it with an empty string
             if (viaForKey === null) {
@@ -166,23 +181,44 @@ export class CTSService {
             if (collector[key] !== undefined) {
                 collector[key][0].push(departureDate);
             } else {
-                collector[key] = [[departureDate], publishedLineName, destinationName, vehicleMode, directionRef, via];
-            }   
+                collector[key] = [
+                    [departureDate],
+                    publishedLineName,
+                    destinationName,
+                    vehicleMode,
+                    directionRef,
+                    via,
+                ];
+            }
         });
 
-       
         // Create an array of VehicleStop objects from the collector
         let vehicleStops: VehicleStop[] = [];
         for (let key in collector) {
-            let [departureDates, publishedLineName, destinationName, vehicleMode, directionRef, via] = collector[key];
-            vehicleStops.push(new VehicleStop(publishedLineName, vehicleMode as TransportType, directionRef, destinationName, via, departureDates));
+            let [
+                departureDates,
+                publishedLineName,
+                destinationName,
+                vehicleMode,
+                directionRef,
+                via,
+            ] = collector[key];
+            vehicleStops.push(
+                new VehicleStop(
+                    publishedLineName,
+                    vehicleMode as TransportType,
+                    directionRef,
+                    destinationName,
+                    via,
+                    departureDates
+                )
+            );
         }
         return vehicleStops;
     }
 }
 
 export function listVehicleStops(vehicleStops: VehicleStop[]): string {
-    
     // Sort vehicleStops by directionRef
     vehicleStops.sort((a, b) => {
         if (a.directionRef < b.directionRef) {
@@ -207,7 +243,7 @@ export function listVehicleStops(vehicleStops: VehicleStop[]): string {
         if (vehicleStop.via !== null) {
             result += ` via ${vehicleStop.via}`;
         }
-        result += '**: ';
+        result += "**: ";
         // Sort departureDates by departure time, ascending
         vehicleStop.departureDates.sort((a, b) => {
             return a.getTime() - b.getTime();
@@ -218,7 +254,9 @@ export function listVehicleStops(vehicleStops: VehicleStop[]): string {
         // For each departureDate
         for (let departureDate of vehicleStop.departureDates) {
             // Count the number of minutes until the departure
-            let minutes = Math.floor((departureDate.getTime() - new Date().getTime()) / 1000 / 60);
+            let minutes = Math.floor(
+                (departureDate.getTime() - new Date().getTime()) / 1000 / 60
+            );
             // If minutes is negative, set it to 0
             if (minutes < 0) {
                 minutes = 0;
@@ -243,15 +281,15 @@ export function listVehicleStops(vehicleStops: VehicleStop[]): string {
         let currentName = vehicleStopsList.split(":")[0];
         if (count > 0) {
             if (lastName == currentName) {
-                result += "\n"
+                result += "\n";
             } else {
-                result += "\n\n"
+                result += "\n\n";
             }
         }
         lastName = currentName;
-        result += "> " + vehicleStopsList
+        result += "> " + vehicleStopsList;
         count += 1;
     }
-    
+
     return result;
 }

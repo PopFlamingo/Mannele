@@ -8,7 +8,7 @@ export class CTSRequestsCacher {
     // The value contains multiple elements:
     // When the request was last sent (Date)
     // The response data from the server
-    private requests: { [key: string]: { lastSent: Date, response: any } } = {};
+    private requests: { [key: string]: { lastSent: Date; response: any } } = {};
 
     // Store the request token
     private requestToken: string;
@@ -25,28 +25,30 @@ export class CTSRequestsCacher {
         // First we check if the request is already in the dictionary
         // If it is we check if it was made less than 30 seconds ago
         // If it is we return the response from the dictionary
-        if (this.requests[url] && this.requests[url].lastSent.getTime() + 30000 > Date.now()) {
+        if (
+            this.requests[url] &&
+            this.requests[url].lastSent.getTime() + 30000 > Date.now()
+        ) {
             return this.requests[url].response;
         } else {
             let authValue = `${this.requestToken}:`;
-            authValue = Buffer.from(authValue).toString('base64');
-            
+            authValue = Buffer.from(authValue).toString("base64");
+
             // Use axios to send the request, using authValue as
             // out Basic Authorization header
             let response = await axios.get(url, {
                 headers: {
-                    'Authorization': `Basic ${authValue}`
-                }
+                    Authorization: `Basic ${authValue}`,
+                },
             });
 
             // Store the response in the dictionary
             this.requests[url] = {
                 lastSent: new Date(),
-                response: response.data
+                response: response.data,
             };
 
             return response.data;
-
         }
     }
 }

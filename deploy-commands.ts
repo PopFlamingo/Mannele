@@ -1,6 +1,10 @@
-import { SlashCommandBuilder, SlashCommandStringOption, SlashCommandSubcommandBuilder } from "@discordjs/builders";
-const { REST } = require('@discordjs/rest');
-const { Routes } = require('discord-api-types/v9');
+import {
+    SlashCommandBuilder,
+    SlashCommandStringOption,
+    SlashCommandSubcommandBuilder,
+} from "@discordjs/builders";
+const { REST } = require("@discordjs/rest");
+const { Routes } = require("discord-api-types/v9");
 
 // Load DISCORD_TOKEN from environment variables and throw an error if it's not set
 let tokenCTS = process.env.DISCORD_TOKEN;
@@ -26,28 +30,28 @@ let stations = [
     "Observatoire",
     "Palerme",
     "Rome",
-    "Cité administrative"
-]
+    "Cité administrative",
+];
 
-let stationsTuples: [string,string][] = [
-    ["Esplanade","Esplanade"],
-    ["Université","Université"],
-    ["Observatoire","Observatoire"],
-    ["Palerme","Palerme"],
-    ["Rome","Rome"],
-    ["Cité administrative","Cité administrative"]
-]
-
+let stationsTuples: [string, string][] = [
+    ["Esplanade", "Esplanade"],
+    ["Université", "Université"],
+    ["Observatoire", "Observatoire"],
+    ["Palerme", "Palerme"],
+    ["Rome", "Rome"],
+    ["Cité administrative", "Cité administrative"],
+];
 
 // Sort stations by name
 stations.sort();
 
-
 const commands = [
-	new SlashCommandBuilder()
-    .setName("horaires")
-    .setDescription("Affiche les horaires pour des lignes et station aux alentours de l'université")
-    /*
+    new SlashCommandBuilder()
+        .setName("horaires")
+        .setDescription(
+            "Affiche les horaires pour des lignes et station aux alentours de l'université"
+        )
+        /*
     .addSubcommand(
         new SlashCommandSubcommandBuilder()
         .setName("ligne")
@@ -61,31 +65,32 @@ const commands = [
         )
     )
     */
-    .addSubcommand(
-        new SlashCommandSubcommandBuilder()
-        .setName("station")
-        .setDescription("Affiche les horaires pour une station aux alentours de l'université")
-        .addStringOption(
-            new SlashCommandStringOption()
-            .setName("station")
-            .setDescription("Station à afficher")
-            .addChoices(stationsTuples)
-            .setRequired(true)
-        )
-    )
-].map(command => command.toJSON());
+        .addSubcommand(
+            new SlashCommandSubcommandBuilder()
+                .setName("station")
+                .setDescription(
+                    "Affiche les horaires pour une station aux alentours de l'université"
+                )
+                .addStringOption(
+                    new SlashCommandStringOption()
+                        .setName("station")
+                        .setDescription("Station à afficher")
+                        .addChoices(stationsTuples)
+                        .setRequired(true)
+                )
+        ),
+].map((command) => command.toJSON());
 
-const rest = new REST({ version: '9' }).setToken(tokenCTS);
+const rest = new REST({ version: "9" }).setToken(tokenCTS);
 
 (async () => {
-	try {
-		await rest.put(
-			Routes.applicationGuildCommands(clientId, guildId),
-			{ body: commands },
-		);
+    try {
+        await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
+            body: commands,
+        });
 
-		console.log('Successfully registered application commands.');
-	} catch (error) {
-		console.error(error);
-	}
+        console.log("Successfully registered application commands.");
+    } catch (error) {
+        console.error(error);
+    }
 })();

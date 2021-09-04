@@ -1,8 +1,7 @@
-
 // Import discordjs library
-import { Client, Intents } from 'discord.js';
-import { CTSService, listVehicleStops } from './CTSService';
-import { emojiForStation } from './station_emojis';
+import { Client, Intents } from "discord.js";
+import { CTSService, listVehicleStops } from "./CTSService";
+import { emojiForStation } from "./station_emojis";
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 
@@ -14,16 +13,16 @@ let ctsToken = process.env.CTS_TOKEN;
 
 if (ctsToken === undefined) {
     // Throw an error if the CTS_TOKEN is not defined
-    throw new Error('CTS_TOKEN environment variable is not defined');
+    throw new Error("CTS_TOKEN environment variable is not defined");
 }
 
 const service = new CTSService(ctsToken);
 
-client.once('ready', () => {
-    console.log('Bot started');
+client.once("ready", () => {
+    console.log("Bot started");
 });
 
-client.on("interactionCreate", async interaction => {
+client.on("interactionCreate", async (interaction) => {
     if (!interaction.isCommand()) {
         return;
     }
@@ -48,33 +47,38 @@ client.on("interactionCreate", async interaction => {
                     types.add(stop.transportType);
                 }
                 if (types.size == 1) {
-                    final += ("\n" + listVehicleStops(stops))
+                    final += "\n" + listVehicleStops(stops);
                 } else {
                     // Get only the "tram" vehicles
-                    let trams = stops.filter(stop => stop.transportType == "tram");
-                    final += "\n**Trams  :tram: :**\n"
+                    let trams = stops.filter(
+                        (stop) => stop.transportType == "tram"
+                    );
+                    final += "\n**Trams  :tram: :**\n";
                     final += listVehicleStops(trams);
 
                     // Get only the "bus" vehicles
-                    let buses = stops.filter(stop => stop.transportType == "bus");
-                    final += "\n\n**Bus  :bus: :**\n"
+                    let buses = stops.filter(
+                        (stop) => stop.transportType == "bus"
+                    );
+                    final += "\n\n**Bus  :bus: :**\n";
                     final += listVehicleStops(buses);
                 }
 
                 interaction.reply(final);
-                
             } else {
-                interaction.reply(`Cette fonction n'est pas encore implémentée`);
+                interaction.reply(
+                    `Cette fonction n'est pas encore implémentée`
+                );
             }
         } else {
             interaction.reply(`Cette fonction n'est pas encore implémentée`);
         }
-    } catch(error) {
-        console.error(error)
+    } catch (error) {
+        console.error(error);
         interaction.reply(`Une erreur est survenue`);
-    } 
+    }
     let sub = interaction.options.getSubcommand();
-})
+});
 
 // Login to Discord
 client.login(token);
