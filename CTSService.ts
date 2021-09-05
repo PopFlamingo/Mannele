@@ -181,80 +181,82 @@ export class CTSService {
         // Return all values in the collector
         return Object.values(collector);
     }
-}
 
-export function listVehicleStops(vehicleStops: LaneVisitsSchedule[]): string {
-    // Sort vehicleStops by directionRef
-    vehicleStops.sort((a, b) => {
-        if (a.directionRef < b.directionRef) {
-            return -1;
-        } else if (a.directionRef > b.directionRef) {
-            return 1;
-        } else {
-            return 0;
-        }
-    });
-
-    // Sort vehicleStops by line name
-    vehicleStops.sort((a, b) => {
-        return a.name.localeCompare(b.name);
-    });
-
-    let vehicleStopsLists: string[] = [];
-
-    // For each vehicleStop
-    for (let vehicleStop of vehicleStops) {
-        let result = `**${vehicleStop.name}: ${vehicleStop.destinationName}`;
-        if (vehicleStop.via !== undefined) {
-            result += ` via ${vehicleStop.via}`;
-        }
-        result += "**: ";
-        // Sort departureDates by departure time, ascending
-        vehicleStop.departureDates.sort((a, b) => {
-            return a.getTime() - b.getTime();
+    static formatStops(vehicleStops: LaneVisitsSchedule[]): string {
+        // Sort vehicleStops by directionRef. This allows us to display the stops
+        // in the correct order both for a given line and accross lines
+        vehicleStops.sort((a, b) => {
+            if (a.directionRef < b.directionRef) {
+                return -1;
+            } else if (a.directionRef > b.directionRef) {
+                return 1;
+            } else {
+                return 0;
+            }
         });
 
-        let departureStrings: string[] = [];
+        // Sort vehicleStops by line name (this is a stable sort in NodeJS so we still)
+        // benefit from the fact that the lines are sorted by directionRef
+        vehicleStops.sort((a, b) => {
+            return a.name.localeCompare(b.name);
+        });
 
-        // For each departureDate
-        for (let departureDate of vehicleStop.departureDates) {
-            // Count the number of minutes until the departure
-            let minutes = Math.floor(
-                (departureDate.getTime() - new Date().getTime()) / 1000 / 60
-            );
-            // If minutes is negative, set it to 0
-            if (minutes < 0) {
-                minutes = 0;
+        let vehicleStopsLists: string[] = [];
+
+        // For each vehicleStop
+        for (let vehicleStop of vehicleStops) {
+            let formattedLine = `**${vehicleStop.name}: ${vehicleStop.destinationName}`;
+            if (vehicleStop.via !== undefined) {
+                formattedLine += ` via ${vehicleStop.via}`;
+            }
+            formattedLine += "**: ";
+            // Sort departureDates by departure time, ascending
+            vehicleStop.departureDates.sort((a, b) => {
+                return a.getTime() - b.getTime();
+            });
+
+            let departureStrings: string[] = [];
+
+            // For each departureDate
+            for (let departureDate of vehicleStop.departureDates) {
+                // Count the number of minutes until the departure
+                let minutes = Math.floor(
+                    (departureDate.getTime() - new Date().getTime()) / 1000 / 60
+                );
+                // If minutes is negative, set it to 0
+                if (minutes < 0) {
+                    minutes = 0;
+                }
+
+                if (minutes === 0) {
+                    departureStrings.push("maintenant");
+                } else if (minutes > 0) {
+                    departureStrings.push(`${minutes} min`);
+                }
             }
 
-            if (minutes === 0) {
-                departureStrings.push("maintenant");
-            } else if (minutes > 0) {
-                departureStrings.push(`${minutes} min`);
-            }
+            formattedLine += departureStrings.join(", ");
+            vehicleStopsLists.push(formattedLine);
         }
 
-        result += departureStrings.join(", ");
-        vehicleStopsLists.push(result);
-    }
-
-    var count = 0;
-    var result = "";
-    var lastName = "";
-    // For each vehicleStopList
-    for (let vehicleStopsList of vehicleStopsLists) {
-        let currentName = vehicleStopsList.split(":")[0];
-        if (count > 0) {
-            if (lastName == currentName) {
-                result += "\n";
-            } else {
-                result += "\n\n";
+        var count = 0;
+        var result = "";
+        var lastName = "";
+        // We visually group the stops by line name
+        for (let vehicleStopsList of vehicleStopsLists) {
+            let currentName = vehicleStopsList.split(":")[0];
+            if (count > 0) {
+                if (lastName == currentName) {
+                    result += "\n";
+                } else {
+                    result += "\n\n";
+                }
             }
+            lastName = currentName;
+            result += "> " + vehicleStopsList;
+            count += 1;
         }
-        lastName = currentName;
-        result += "> " + vehicleStopsList;
-        count += 1;
-    }
 
-    return result;
+        return result;
+    }
 }
