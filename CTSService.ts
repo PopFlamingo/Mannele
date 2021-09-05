@@ -63,23 +63,35 @@ export class CTSService {
     async getStopsForStation(
         stationName: string
     ): Promise<LaneDepartureSchedule[]> {
-        // Check stationCodes[stationName] is not undefined, otherwise throw an error
+        // Check there we have corresponding station codes for
+        // the requested station name
         if (stationCodes[stationName] === undefined) {
             throw new Error("Station not found");
         }
 
-        let kinds = [TransportType.tram, TransportType.bus];
+        // Array containing all the transport kinds
+        let kinds = Object.values(TransportType);
+
+        // Array that will store all stop codes for the station
         let codesList: string[] = [];
-        // For each kind of transport
+
+        // Aggregate the codes from all types of transport.
+        // We are requesting stop times for all kinds of transports at once
+        // and we only differentiate them in the response processing code.
+        // This is a deliberate choice as this would otherwise require
+        // multiple requests for the same station (one per transport type)
+        // which is not ideal in terms of performance and pressure on the CTS API.
         for (let kind of kinds) {
             let codes = stationCodes[stationName][kind];
             if (codes === undefined) {
                 continue;
             }
-            // Add codes to the list
             codesList = codesList.concat(codes);
         }
 
+        // We query the CTS API for all the stop codes for the station
+        // so we actually need to repeat the MonitoringRef query parameter
+        // for each stop code.
         let params = new URLSearchParams();
         for (let code of codesList) {
             params.append("MonitoringRef", code);
@@ -88,23 +100,31 @@ export class CTSService {
         let response = await this.api.get("/stop-monitoring", {
             params: params,
         });
-        let data = response.data;
 
+        // We use a strongly typed JSON parser to parse the response
+        // which eliminates a lot of boilerplate code
         const serializer = new TypedJSON(SpecializedResponseGeneralMessageList);
-        let parsed = serializer.parse(data);
+        let parsed = serializer.parse(response.data);
         if (parsed === undefined) {
             throw new Error("Could not parse response");
         }
 
         let stopMonitoringDelivery =
             parsed.serviceDelivery.stopMonitoringDelivery;
+
         // Make sure there is exactly one element in the array
+        // Currently the CTS API only returns one response per request
+        // but this may change at some point so this is not future-proof
+        // However it's hard to understand why there would ever be more than one
+        // It would be best to check with CTS why that could be the case (if ever)
+        // and what to do then.
         if (stopMonitoringDelivery.length !== 1) {
             throw new Error(
                 "Not exactly one stop monitoring delivery in CTS response"
             );
         }
 
+        // An array that stores all vehicle visits for the stops we requested
         let monitoredStopVisits = stopMonitoringDelivery[0].monitoredStopVisit;
 
         let collector: {
@@ -118,41 +138,40 @@ export class CTSService {
             ];
         } = {};
 
-        // For each element in the monitoredStopVisit array
+        // This code loops over all the vehicle visits times and groups them
+        // by their their (lanes / destinations / vehicle kind / [optional] via)
+        // then we can for instance have a "Tramway lane Z to destination FooCity"
+        // group that contains all the departure times for this specific lane/destination.
+        // These lane/destination - times associations are stored in LaneDepartureSchedule
+        // objects and this is what we return to the caller.
+        //
+        // The CTS/SIRI API doesn't provide such as feature so we have to do it ourselves.
         monitoredStopVisits.forEach((monitoredStopVisit) => {
-            let vehicleInfo = monitoredStopVisit.monitoredVehicleJourney;
-            let publishedLineName = vehicleInfo.publishedLineName;
-            let destinationName = vehicleInfo.destinationName;
-            let vehicleMode = vehicleInfo.vehicleMode;
-            let directionRef = vehicleInfo.directionRef;
-            let via = vehicleInfo.via;
-            let monitoredCall = vehicleInfo.monitoredCall;
+            let info = monitoredStopVisit.monitoredVehicleJourney;
 
-            // Get the departure date (or arrival date if there is no departure date)
-            let stopDate = monitoredCall.expectedDepartureTime;
-            if (stopDate === undefined) {
-                stopDate = monitoredCall.expectedArrivalTime;
+            // Get the departure time (or arrival time if there is no departure date)
+            // In practice it seems there is always a departure time, but if it was
+            // to be missing one day, using the arrival time would still be fine
+            // Note that "arrival date means" date of arrival at the stop
+            // not at some destination, so this is why its a correct fallback
+            let stopTime = info.monitoredCall.expectedDepartureTime;
+            if (stopTime === undefined) {
+                stopTime = info.monitoredCall.expectedArrivalTime;
             }
 
-            let viaForKey = via;
-            // If via is null replace it with an empty string
-            if (viaForKey === null) {
-                viaForKey = "";
-            }
-
-            let key = `${publishedLineName}|${destinationName}|${vehicleMode}|${via}`;
+            let key = `${info.publishedLineName}|${info.destinationName}|${info.vehicleMode}|${info.via}`;
 
             // If the key is already in the collector, add the departure date to the array
             if (collector[key] !== undefined) {
-                collector[key][0].push(stopDate);
+                collector[key][0].push(stopTime);
             } else {
                 collector[key] = [
-                    [stopDate],
-                    publishedLineName,
-                    destinationName,
-                    vehicleMode,
-                    directionRef,
-                    via,
+                    [stopTime],
+                    info.publishedLineName,
+                    info.destinationName,
+                    info.vehicleMode,
+                    info.directionRef,
+                    info.via,
                 ];
             }
         });
