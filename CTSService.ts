@@ -2,7 +2,10 @@ import { linesStations, stationCodes } from "./data";
 import axios, { AxiosInstance } from "axios";
 import { setupCache } from "axios-cache-adapter";
 import { TypedJSON } from "typedjson";
-import { ResponseGeneralMessageList } from "./SIRITypes";
+import {
+    ResponseGeneralMessageList,
+    StopMonitoringDelivery,
+} from "./SIRITypesSpecialized";
 
 const getKeyValue = (key: string) => (obj: Record<string, any>) => obj[key];
 
@@ -17,7 +20,7 @@ export class LaneDepartureSchedule {
     transportType: TransportType;
     directionRef: number;
     destinationName: string;
-    via: string | null;
+    via: string | undefined;
     departureDates: Date[];
 
     // Constructor
@@ -26,7 +29,7 @@ export class LaneDepartureSchedule {
         transportType: TransportType,
         directionRef: number,
         destinationName: string,
-        via: string | null,
+        via: string | undefined,
         departureDates: Date[]
     ) {
         this.name = name;
@@ -88,38 +91,21 @@ export class CTSService {
         let data = response.data;
 
         const serializer = new TypedJSON(ResponseGeneralMessageList);
-        try {
-            console.log(serializer.parse(data));
-        } catch (error) {
-            console.error(error);
+        let parsed = serializer.parse(data);
+        if (parsed === undefined) {
+            throw new Error("Could not parse response");
         }
 
-        // Make sure response is not empty
-        if (response === undefined) {
-            throw new Error("No response");
-        }
-
-        let serviceDelivery = data.ServiceDelivery;
-        if (serviceDelivery === undefined) {
-            throw new Error("No service delivery");
-        }
-
-        let stopMonitoringDelivery = serviceDelivery.StopMonitoringDelivery;
-        // Check stopMonitoringDelivery is not undefined, otherwise throw an error
-        if (stopMonitoringDelivery === undefined) {
-            throw new Error("No stop monitoring delivery");
-        }
-
+        let stopMonitoringDelivery =
+            parsed.serviceDelivery.stopMonitoringDelivery;
         // Make sure there is exactly one element in the array
         if (stopMonitoringDelivery.length !== 1) {
-            throw new Error("More than one stop monitoring delivery");
+            throw new Error(
+                "Not exactly one stop monitoring delivery in CTS response"
+            );
         }
 
-        let monitoredStopVisits = stopMonitoringDelivery[0].MonitoredStopVisit;
-        // Check monitoredStopVisit is not undefined, otherwise throw an error
-        if (monitoredStopVisits === undefined) {
-            throw new Error("No monitored stop visit");
-        }
+        let monitoredStopVisits = stopMonitoringDelivery[0].monitoredStopVisit;
 
         let collector: {
             [key: string]: [
@@ -128,65 +114,25 @@ export class CTSService {
                 string,
                 string,
                 number,
-                string | null
+                string | undefined
             ];
         } = {};
 
         // For each element in the monitoredStopVisit array
-        monitoredStopVisits.forEach((monitoredStopVisit: any) => {
-            // Store the MonitoredVehicleJourney element and check it is not undefined
-            let monitoredVehicleJourney =
-                monitoredStopVisit.MonitoredVehicleJourney;
-            if (monitoredVehicleJourney === undefined) {
-                return;
-            }
-            // Get the PublishedLineName element and check it is not undefined
-            let publishedLineName = monitoredVehicleJourney.PublishedLineName;
-            if (publishedLineName === undefined) {
-                return;
-            }
-            // Get the DestinationName element and check it is not undefined
-            let destinationName = monitoredVehicleJourney.DestinationName;
-            if (destinationName === undefined) {
-                return;
-            }
+        monitoredStopVisits.forEach((monitoredStopVisit) => {
+            let vehicleInfo = monitoredStopVisit.monitoredVehicleJourney;
+            let publishedLineName = vehicleInfo.publishedLineName;
+            let destinationName = vehicleInfo.destinationName;
+            let vehicleMode = vehicleInfo.vehicleMode;
+            let directionRef = vehicleInfo.directionRef;
+            let via = vehicleInfo.via;
+            let monitoredCall = vehicleInfo.monitoredCall;
 
-            // Get the VehicleMode element and check it is not undefined
-            let vehicleMode = monitoredVehicleJourney.VehicleMode;
-            if (vehicleMode === undefined) {
-                return;
+            // Get the departure date (or arrival date if there is no departure date)
+            let stopDate = monitoredCall.expectedDepartureTime;
+            if (stopDate === undefined) {
+                stopDate = monitoredCall.expectedArrivalTime;
             }
-
-            // Get DirectionRef element and check it is not undefined
-            let directionRef = monitoredVehicleJourney.DirectionRef;
-            if (directionRef === undefined) {
-                return;
-            }
-
-            // Get the Via element and check it is not undefined
-            let via = monitoredVehicleJourney.Via;
-            if (via === undefined) {
-                return;
-            }
-
-            // Get the MonitoredCall element and check it is not undefined
-            let monitoredCall = monitoredVehicleJourney.MonitoredCall;
-            if (monitoredCall === undefined) {
-                return;
-            }
-
-            // Get the ExpectedDepartureTime element and check it is not undefined
-            let expectedDepartureTime = monitoredCall.ExpectedDepartureTime;
-            if (expectedDepartureTime === undefined) {
-                return;
-            }
-
-            // Convert the ExpectedDepartureTime element to a Date object
-            // The ExpectedDepartureTime element is in a format like this:
-            // "2020-05-01T12:00:00+02:00"
-            let departureDate = new Date(expectedDepartureTime);
-
-            let data = [publishedLineName, destinationName, via];
 
             let viaForKey = via;
             // If via is null replace it with an empty string
@@ -198,10 +144,10 @@ export class CTSService {
 
             // If the key is already in the collector, add the departure date to the array
             if (collector[key] !== undefined) {
-                collector[key][0].push(departureDate);
+                collector[key][0].push(stopDate);
             } else {
                 collector[key] = [
-                    [departureDate],
+                    [stopDate],
                     publishedLineName,
                     destinationName,
                     vehicleMode,
@@ -261,7 +207,7 @@ export function listVehicleStops(
     // For each vehicleStop
     for (let vehicleStop of vehicleStops) {
         let result = `**${vehicleStop.name}: ${vehicleStop.destinationName}`;
-        if (vehicleStop.via !== null) {
+        if (vehicleStop.via !== undefined) {
             result += ` via ${vehicleStop.via}`;
         }
         result += "**: ";
