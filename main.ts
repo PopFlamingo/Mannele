@@ -1,8 +1,10 @@
+import "reflect-metadata";
 import { Client, Intents, Collection, CommandInteraction } from "discord.js";
 import { BotServices } from "./BotServices";
 import { isCommandDescriptor } from "./CommandDescriptor";
 import { CTSService, listVehicleStops } from "./CTSService";
 import * as fs from "fs";
+
 require("dotenv").config();
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });

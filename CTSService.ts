@@ -1,6 +1,8 @@
 import { linesStations, stationCodes } from "./data";
 import axios, { AxiosInstance } from "axios";
 import { setupCache } from "axios-cache-adapter";
+import { TypedJSON } from "typedjson";
+import { SpecializedStopMonitoringResponse, VehicleMode } from "./SIRITypes";
 
 const getKeyValue = (key: string) => (obj: Record<string, any>) => obj[key];
 
@@ -10,21 +12,21 @@ export enum TransportType {
     bus = "bus",
 }
 
-export class LaneDepartureSchedule {
+export class LaneVisitsSchedule {
     name: string;
-    transportType: TransportType;
+    transportType: VehicleMode;
     directionRef: number;
     destinationName: string;
-    via: string | null;
+    via: string | undefined;
     departureDates: Date[];
 
     // Constructor
     constructor(
         name: string,
-        transportType: TransportType,
+        transportType: VehicleMode,
         directionRef: number,
         destinationName: string,
-        via: string | null,
+        via: string | undefined,
         departureDates: Date[]
     ) {
         this.name = name;
@@ -55,182 +57,133 @@ export class CTSService {
 
     private api: AxiosInstance;
 
-    async getStopsForStation(
+    async getVisitsForStation(
         stationName: string
-    ): Promise<LaneDepartureSchedule[]> {
-        // Check stationCodes[stationName] is not undefined, otherwise throw an error
+    ): Promise<LaneVisitsSchedule[]> {
+        // Note the difference between a stop and a station:
+        // A stop is a place where a tram or a bus passes in a specific
+        // direction (for instance there is typically one stop on each side
+        // of the rails) and you have both tramway stops and bus stops.
+        // A station is a group of stops that are geographically close.
+        // In general users refer to stations instead of stops, but they
+        // still implicitly refer to specific stops by stating their
+        // destination name, lane and transport type.
+
+        // Check there we have corresponding stop codes for
+        // the requested station name
         if (stationCodes[stationName] === undefined) {
             throw new Error("Station not found");
         }
 
-        let kinds = [TransportType.tram, TransportType.bus];
+        // Array containing all the transport kinds
+        let kinds = Object.values(TransportType);
+
+        // Array that will store all stop codes for the station
         let codesList: string[] = [];
-        // For each kind of transport
+
+        // Aggregate the codes from all types of transport (ie: get
+        // codes for both tram and bus stops at the selected station).
+        // We are requesting stop times for all kinds of transports at once
+        // and we only differentiate them in the response processing code.
+        // This is a deliberate choice as this would otherwise require
+        // multiple requests for the same station (one per transport type)
+        // which is not ideal in terms of performance and pressure on the CTS API.
         for (let kind of kinds) {
             let codes = stationCodes[stationName][kind];
             if (codes === undefined) {
                 continue;
             }
-            // Add codes to the list
             codesList = codesList.concat(codes);
         }
 
+        // We query the CTS API for all the stop codes for the station
+        // so we actually need to repeat the MonitoringRef query parameter
+        // for each stop code.
         let params = new URLSearchParams();
         for (let code of codesList) {
             params.append("MonitoringRef", code);
         }
 
-        let response = await this.api.get("/stop-monitoring", {
+        let rawResponse = await this.api.get("/stop-monitoring", {
             params: params,
         });
-        let data = response.data;
 
-        // Make sure response is not empty
+        // We use a strongly typed JSON parser to parse the response
+        // which eliminates a lot of boilerplate code
+        const serializer = new TypedJSON(SpecializedStopMonitoringResponse);
+        let response = serializer.parse(rawResponse.data);
         if (response === undefined) {
-            throw new Error("No response");
+            throw new Error("Could not parse response");
         }
 
-        let serviceDelivery = data.ServiceDelivery;
-        if (serviceDelivery === undefined) {
-            throw new Error("No service delivery");
-        }
-
-        let stopMonitoringDelivery = serviceDelivery.StopMonitoringDelivery;
-        // Check stopMonitoringDelivery is not undefined, otherwise throw an error
-        if (stopMonitoringDelivery === undefined) {
-            throw new Error("No stop monitoring delivery");
-        }
+        let stopMonitoringDelivery =
+            response.serviceDelivery.stopMonitoringDelivery;
 
         // Make sure there is exactly one element in the array
+        // Currently the CTS API only returns one response per request
+        // but this may change at some point so this is not future-proof
+        // However it's hard to understand why there would ever be more than one
+        // It would be best to check with CTS why that could be the case (if ever)
+        // and what to do then.
         if (stopMonitoringDelivery.length !== 1) {
-            throw new Error("More than one stop monitoring delivery");
+            throw new Error(
+                "Not exactly one stop monitoring delivery in CTS response"
+            );
         }
 
-        let monitoredStopVisits = stopMonitoringDelivery[0].MonitoredStopVisit;
-        // Check monitoredStopVisit is not undefined, otherwise throw an error
-        if (monitoredStopVisits === undefined) {
-            throw new Error("No monitored stop visit");
-        }
+        // An array that stores all vehicle visits for the stops we requested
+        let monitoredStopVisits = stopMonitoringDelivery[0].monitoredStopVisit;
 
         let collector: {
-            [key: string]: [
-                Date[],
-                string,
-                string,
-                string,
-                number,
-                string | null
-            ];
+            [key: string]: LaneVisitsSchedule;
         } = {};
 
-        // For each element in the monitoredStopVisit array
-        monitoredStopVisits.forEach((monitoredStopVisit: any) => {
-            // Store the MonitoredVehicleJourney element and check it is not undefined
-            let monitoredVehicleJourney =
-                monitoredStopVisit.MonitoredVehicleJourney;
-            if (monitoredVehicleJourney === undefined) {
-                return;
-            }
-            // Get the PublishedLineName element and check it is not undefined
-            let publishedLineName = monitoredVehicleJourney.PublishedLineName;
-            if (publishedLineName === undefined) {
-                return;
-            }
-            // Get the DestinationName element and check it is not undefined
-            let destinationName = monitoredVehicleJourney.DestinationName;
-            if (destinationName === undefined) {
-                return;
-            }
+        // This code loops over all the vehicle visits times and groups them
+        // by their their (lanes / destinations / vehicle kind / [optional] via)
+        // then we can for instance have a "Tramway lane Z to destination FooCity"
+        // group that contains all the departure times for this specific lane/destination.
+        // These lane/destination - times associations are stored in LaneVisitsSchedule
+        // objects and this is what we return to the caller.
+        //
+        // The CTS/SIRI API doesn't provide such as feature so we have to do it ourselves.
+        monitoredStopVisits.forEach((monitoredStopVisit) => {
+            let info = monitoredStopVisit.monitoredVehicleJourney;
 
-            // Get the VehicleMode element and check it is not undefined
-            let vehicleMode = monitoredVehicleJourney.VehicleMode;
-            if (vehicleMode === undefined) {
-                return;
+            // Get the departure time (or arrival time if there is no departure date)
+            // In practice it seems there is always a departure time, but if it was
+            // to be missing one day, using the arrival time would still be fine
+            // Note that "arrival date means" date of arrival at the stop
+            // not at some destination, so this is why its a correct fallback
+            let stopTime = info.monitoredCall.expectedDepartureTime;
+            if (stopTime === undefined) {
+                stopTime = info.monitoredCall.expectedArrivalTime;
             }
 
-            // Get DirectionRef element and check it is not undefined
-            let directionRef = monitoredVehicleJourney.DirectionRef;
-            if (directionRef === undefined) {
-                return;
-            }
+            // The key is used to group the vehicle visits
+            let key = `${info.publishedLineName}|${info.destinationName}|${info.vehicleMode}|${info.via}`;
 
-            // Get the Via element and check it is not undefined
-            let via = monitoredVehicleJourney.Via;
-            if (via === undefined) {
-                return;
-            }
-
-            // Get the MonitoredCall element and check it is not undefined
-            let monitoredCall = monitoredVehicleJourney.MonitoredCall;
-            if (monitoredCall === undefined) {
-                return;
-            }
-
-            // Get the ExpectedDepartureTime element and check it is not undefined
-            let expectedDepartureTime = monitoredCall.ExpectedDepartureTime;
-            if (expectedDepartureTime === undefined) {
-                return;
-            }
-
-            // Convert the ExpectedDepartureTime element to a Date object
-            // The ExpectedDepartureTime element is in a format like this:
-            // "2020-05-01T12:00:00+02:00"
-            let departureDate = new Date(expectedDepartureTime);
-
-            let data = [publishedLineName, destinationName, via];
-
-            let viaForKey = via;
-            // If via is null replace it with an empty string
-            if (viaForKey === null) {
-                viaForKey = "";
-            }
-
-            let key = `${publishedLineName}|${destinationName}|${vehicleMode}|${via}`;
-
-            // If the key is already in the collector, add the departure date to the array
+            // If the there is already a value for this key add the departure date to the array
             if (collector[key] !== undefined) {
-                collector[key][0].push(departureDate);
+                collector[key].departureDates.push(stopTime);
             } else {
-                collector[key] = [
-                    [departureDate],
-                    publishedLineName,
-                    destinationName,
-                    vehicleMode,
-                    directionRef,
-                    via,
-                ];
+                // Otherwise create a new LaneVisitsSchedule object and associate it with the key
+                collector[key] = new LaneVisitsSchedule(
+                    info.publishedLineName,
+                    info.vehicleMode,
+                    info.directionRef,
+                    info.destinationName,
+                    info.via,
+                    [stopTime]
+                );
             }
         });
 
-        // Create an array of VehicleStop objects from the collector
-        let vehicleStops: LaneDepartureSchedule[] = [];
-        for (let key in collector) {
-            let [
-                departureDates,
-                publishedLineName,
-                destinationName,
-                vehicleMode,
-                directionRef,
-                via,
-            ] = collector[key];
-            vehicleStops.push(
-                new LaneDepartureSchedule(
-                    publishedLineName,
-                    vehicleMode as TransportType,
-                    directionRef,
-                    destinationName,
-                    via,
-                    departureDates
-                )
-            );
-        }
-        return vehicleStops;
+        // Return all values in the collector
+        return Object.values(collector);
     }
 }
 
-export function listVehicleStops(
-    vehicleStops: LaneDepartureSchedule[]
-): string {
+export function listVehicleStops(vehicleStops: LaneVisitsSchedule[]): string {
     // Sort vehicleStops by directionRef
     vehicleStops.sort((a, b) => {
         if (a.directionRef < b.directionRef) {
@@ -252,7 +205,7 @@ export function listVehicleStops(
     // For each vehicleStop
     for (let vehicleStop of vehicleStops) {
         let result = `**${vehicleStop.name}: ${vehicleStop.destinationName}`;
-        if (vehicleStop.via !== null) {
+        if (vehicleStop.via !== undefined) {
             result += ` via ${vehicleStop.via}`;
         }
         result += "**: ";
