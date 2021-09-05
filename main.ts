@@ -1,4 +1,3 @@
-// Import discordjs library
 import { Client, Intents, Collection, CommandInteraction } from "discord.js";
 import { BotServices } from "./BotServices";
 import { isCommandDescriptor } from "./CommandDescriptor";
