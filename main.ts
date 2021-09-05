@@ -34,7 +34,6 @@ const commandFiles = fs
     .filter((file) => file.endsWith(".ts"))
     .map((file: string) => file.slice(0, -3));
 
-// For each command file, log its default export (which should be a CommandDescriptor)
 for (const file of commandFiles) {
     const defaultExport = require(`./commands/${file}`).default;
     const instance = new defaultExport();
