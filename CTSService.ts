@@ -15,7 +15,7 @@ export enum TransportType {
     bus = "bus",
 }
 
-export class LaneVisitSchedule {
+export class LaneVisitsSchedule {
     name: string;
     transportType: TransportType;
     directionRef: number;
@@ -62,7 +62,7 @@ export class CTSService {
 
     async getVisitsForStation(
         stationName: string
-    ): Promise<LaneVisitSchedule[]> {
+    ): Promise<LaneVisitsSchedule[]> {
         // Note the difference between a stop and a station:
         // A stop is a place where a tram or a bus passes in a specific
         // direction (for instance there is typically one stop on each side
@@ -152,7 +152,7 @@ export class CTSService {
         // by their their (lanes / destinations / vehicle kind / [optional] via)
         // then we can for instance have a "Tramway lane Z to destination FooCity"
         // group that contains all the departure times for this specific lane/destination.
-        // These lane/destination - times associations are stored in LaneDepartureSchedule
+        // These lane/destination - times associations are stored in LaneVisitsSchedule
         // objects and this is what we return to the caller.
         //
         // The CTS/SIRI API doesn't provide such as feature so we have to do it ourselves.
@@ -187,7 +187,7 @@ export class CTSService {
         });
 
         // Create an array of VehicleStop objects from the collector
-        let vehicleStops: LaneVisitSchedule[] = [];
+        let vehicleStops: LaneVisitsSchedule[] = [];
         for (let key in collector) {
             let [
                 departureDates,
@@ -198,7 +198,7 @@ export class CTSService {
                 via,
             ] = collector[key];
             vehicleStops.push(
-                new LaneVisitSchedule(
+                new LaneVisitsSchedule(
                     publishedLineName,
                     vehicleMode as TransportType,
                     directionRef,
@@ -212,7 +212,7 @@ export class CTSService {
     }
 }
 
-export function listVehicleStops(vehicleStops: LaneVisitSchedule[]): string {
+export function listVehicleStops(vehicleStops: LaneVisitsSchedule[]): string {
     // Sort vehicleStops by directionRef
     vehicleStops.sort((a, b) => {
         if (a.directionRef < b.directionRef) {
