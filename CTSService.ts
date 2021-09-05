@@ -63,7 +63,16 @@ export class CTSService {
     async getStopsForStation(
         stationName: string
     ): Promise<LaneDepartureSchedule[]> {
-        // Check there we have corresponding station codes for
+        // Note the difference between a stop and a station:
+        // A stop is a place where a tram or a bus passes in a specific
+        // direction (for instance there is typically one stop on each side
+        // of the rails) and you have both tramway stops and bus stops.
+        // A station is a group of stops that are geographically close.
+        // In general users refer to stations instead of stops, but they
+        // still implicitly refer to specific stops by stating their
+        // destination name and transport type.
+
+        // Check there we have corresponding stop codes for
         // the requested station name
         if (stationCodes[stationName] === undefined) {
             throw new Error("Station not found");
@@ -75,7 +84,8 @@ export class CTSService {
         // Array that will store all stop codes for the station
         let codesList: string[] = [];
 
-        // Aggregate the codes from all types of transport.
+        // Aggregate the codes from all types of transport (ie: get
+        // codes for both tram and bus stops at the selected station).
         // We are requesting stop times for all kinds of transports at once
         // and we only differentiate them in the response processing code.
         // This is a deliberate choice as this would otherwise require
