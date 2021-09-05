@@ -1,6 +1,6 @@
 import { CommandDescriptor } from "../CommandDescriptor";
 import { CommandInteraction } from "discord.js";
-import { LaneDepartureSchedule, listVehicleStops } from "../CTSService";
+import { LaneVisitSchedule, listVehicleStops } from "../CTSService";
 import { emojiForStation } from "../station_emojis";
 import { BotServices } from "../BotServices";
 
@@ -16,7 +16,7 @@ export default class CommandStationSchedule implements CommandDescriptor {
         if (station === null) {
             throw new Error("No station was provided");
         }
-        let stops = await services.cts.getStopsForStation(station);
+        let stops = await services.cts.getVisitsForStation(station);
         let final = `__**Horaires pour la station *${station}***__`;
         let emoji = emojiForStation(station);
         if (emoji !== null) {
@@ -33,14 +33,14 @@ export default class CommandStationSchedule implements CommandDescriptor {
         } else {
             // Get only the "tram" vehicles
             let trams = stops.filter(
-                (stop: LaneDepartureSchedule) => stop.transportType == "tram"
+                (stop: LaneVisitSchedule) => stop.transportType == "tram"
             );
             final += "\n**Trams  :tram: :**\n";
             final += listVehicleStops(trams);
 
             // Get only the "bus" vehicles
             let buses = stops.filter(
-                (stop: LaneDepartureSchedule) => stop.transportType == "bus"
+                (stop: LaneVisitSchedule) => stop.transportType == "bus"
             );
             final += "\n\n**Bus  :bus: :**\n";
             final += listVehicleStops(buses);

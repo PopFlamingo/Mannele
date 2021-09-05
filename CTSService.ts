@@ -15,7 +15,7 @@ export enum TransportType {
     bus = "bus",
 }
 
-export class LaneDepartureSchedule {
+export class LaneVisitSchedule {
     name: string;
     transportType: TransportType;
     directionRef: number;
@@ -60,9 +60,9 @@ export class CTSService {
 
     private api: AxiosInstance;
 
-    async getStopsForStation(
+    async getVisitsForStation(
         stationName: string
-    ): Promise<LaneDepartureSchedule[]> {
+    ): Promise<LaneVisitSchedule[]> {
         // Note the difference between a stop and a station:
         // A stop is a place where a tram or a bus passes in a specific
         // direction (for instance there is typically one stop on each side
@@ -70,7 +70,7 @@ export class CTSService {
         // A station is a group of stops that are geographically close.
         // In general users refer to stations instead of stops, but they
         // still implicitly refer to specific stops by stating their
-        // destination name and transport type.
+        // destination name, lane and transport type.
 
         // Check there we have corresponding stop codes for
         // the requested station name
@@ -187,7 +187,7 @@ export class CTSService {
         });
 
         // Create an array of VehicleStop objects from the collector
-        let vehicleStops: LaneDepartureSchedule[] = [];
+        let vehicleStops: LaneVisitSchedule[] = [];
         for (let key in collector) {
             let [
                 departureDates,
@@ -198,7 +198,7 @@ export class CTSService {
                 via,
             ] = collector[key];
             vehicleStops.push(
-                new LaneDepartureSchedule(
+                new LaneVisitSchedule(
                     publishedLineName,
                     vehicleMode as TransportType,
                     directionRef,
@@ -212,9 +212,7 @@ export class CTSService {
     }
 }
 
-export function listVehicleStops(
-    vehicleStops: LaneDepartureSchedule[]
-): string {
+export function listVehicleStops(vehicleStops: LaneVisitSchedule[]): string {
     // Sort vehicleStops by directionRef
     vehicleStops.sort((a, b) => {
         if (a.directionRef < b.directionRef) {
