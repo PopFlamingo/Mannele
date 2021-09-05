@@ -1,6 +1,6 @@
 import { CommandDescriptor } from "../CommandDescriptor";
 import { CommandInteraction } from "discord.js";
-import { LaneVisitsSchedule, listVehicleStops } from "../CTSService";
+import { CTSService, LaneVisitsSchedule } from "../CTSService";
 import { emojiForStation } from "../station_emojis";
 import { BotServices } from "../BotServices";
 
@@ -29,21 +29,21 @@ export default class CommandStationSchedule implements CommandDescriptor {
             types.add(stop.transportType);
         }
         if (types.size == 1) {
-            final += "\n" + listVehicleStops(stops);
+            final += "\n" + CTSService.formatStops(stops);
         } else {
             // Get only the "tram" vehicles
             let trams = stops.filter(
                 (stop: LaneVisitsSchedule) => stop.transportType == "tram"
             );
             final += "\n**Trams  :tram: :**\n";
-            final += listVehicleStops(trams);
+            final += CTSService.formatStops(trams);
 
             // Get only the "bus" vehicles
             let buses = stops.filter(
                 (stop: LaneVisitsSchedule) => stop.transportType == "bus"
             );
             final += "\n\n**Bus  :bus: :**\n";
-            final += listVehicleStops(buses);
+            final += CTSService.formatStops(buses);
         }
 
         interaction.reply(final);
