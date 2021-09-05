@@ -134,8 +134,8 @@ export class MonitoredVehicleJourney {
         directionRef: number,
         vehicleMode: VehicleMode,
         monitoredCall: MonitoredCall,
-        publishedLineName?: string,
-        destinationName?: string,
+        publishedLineName: string,
+        destinationName: string,
         destinationShortName?: string,
         via?: string,
         previousCall?: PreviousCall[],
@@ -163,10 +163,10 @@ export class MonitoredVehicleJourney {
     public vehicleMode: VehicleMode;
 
     @jsonMember({ name: "PublishedLineName" })
-    public publishedLineName?: string;
+    public publishedLineName: string;
 
     @jsonMember({ name: "DestinationName" })
-    public destinationName?: string;
+    public destinationName: string;
 
     @jsonMember({ name: "DestinationShortName" })
     public destinationShortName?: string;
@@ -415,6 +415,33 @@ export class EstimatedTimetableDelivery {
 }
 
 @jsonObject
+export class SpecializedMonitoredStopVisit {
+    constructor(
+        recordedAtTime: Date,
+        monitoredVehicleJourney: MonitoredVehicleJourney,
+        monitoringRef?: string,
+        stopCode?: string
+    ) {
+        this.recordedAtTime = recordedAtTime;
+        this.monitoringRef = monitoringRef;
+        this.stopCode = stopCode;
+        this.monitoredVehicleJourney = monitoredVehicleJourney;
+    }
+
+    @jsonMember({ name: "RecordedAtTime" })
+    public recordedAtTime: Date;
+
+    @jsonMember({ name: "MonitoringRef" })
+    public monitoringRef?: string;
+
+    @jsonMember({ name: "StopPointRef" })
+    public stopCode?: string;
+
+    @jsonMember({ name: "MonitoredVehicleJourney" })
+    public monitoredVehicleJourney: MonitoredVehicleJourney;
+}
+
+@jsonObject
 export class MonitoredStopVisit {
     constructor(
         recordedAtTime: Date,
@@ -642,6 +669,91 @@ export class StopMonitoringDelivery {
 }
 
 @jsonObject
+export class SpecializedStopMonitoringDelivery {
+    constructor(
+        responseTimestamp: Date,
+        validUntil: Date,
+        shortestPossibleCycle: number,
+        monitoredStopVisit: MonitoredStopVisit[],
+        monitoringRef?: string[],
+        version?: string
+    ) {
+        this.version = version;
+        this.responseTimestamp = responseTimestamp;
+        this.validUntil = validUntil;
+        this.shortestPossibleCycle = shortestPossibleCycle;
+        this.monitoringRef = monitoringRef;
+        this.monitoredStopVisit = monitoredStopVisit;
+    }
+
+    @jsonMember({ name: "Version" })
+    public version?: string;
+
+    @jsonMember({ name: "ResponseTimestamp" })
+    public responseTimestamp: Date;
+
+    @jsonMember({ name: "ValidUntil" })
+    public validUntil: Date;
+
+    @jsonMember({
+        name: "ShortestPossibleCycle",
+        deserializer: (value) => iso8601DurationToSeconds(value),
+    })
+    public shortestPossibleCycle: number;
+
+    @jsonArrayMember(String, { name: "MonitoringRef" })
+    public monitoringRef?: string[];
+
+    @jsonArrayMember(SpecializedMonitoredStopVisit, {
+        name: "MonitoredStopVisit",
+    })
+    public monitoredStopVisit: SpecializedMonitoredStopVisit[];
+}
+
+@jsonObject
+export class SpecializedResponseStopMonitoringList {
+    constructor(
+        responseTimestamp: Date,
+        stopMonitoringDelivery: SpecializedStopMonitoringDelivery[],
+        requestMessageRef?: string,
+        vehicleMonitoringDelivery?: VehicleMonitoringDelivery[],
+        estimatedTimetableDelivery?: EstimatedTimetableDelivery[],
+        generalMessageDelivery?: GeneralMessageDelivery[]
+    ) {
+        this.responseTimestamp = responseTimestamp;
+        this.requestMessageRef = requestMessageRef;
+        this.stopMonitoringDelivery = stopMonitoringDelivery;
+        this.vehicleMonitoringDelivery = vehicleMonitoringDelivery;
+        this.estimatedTimetableDelivery = estimatedTimetableDelivery;
+        this.generalMessageDelivery = generalMessageDelivery;
+    }
+
+    @jsonMember({ name: "ResponseTimestamp" })
+    public responseTimestamp: Date;
+
+    @jsonMember({ name: "RequestMessageRef" })
+    public requestMessageRef?: string;
+
+    @jsonArrayMember(SpecializedStopMonitoringDelivery, {
+        name: "StopMonitoringDelivery",
+    })
+    public stopMonitoringDelivery: SpecializedStopMonitoringDelivery[];
+
+    @jsonArrayMember(VehicleMonitoringDelivery, {
+        name: "VehicleMonitoringDelivery",
+    })
+    public vehicleMonitoringDelivery?: VehicleMonitoringDelivery[];
+
+    @jsonArrayMember(EstimatedTimetableDelivery, {
+        name: "EstimatedTimetableDelivery",
+    })
+    public estimatedTimetableDelivery?: EstimatedTimetableDelivery[];
+
+    @jsonArrayMember(GeneralMessageDelivery, { name: "GeneralMessageDelivery" })
+    public generalMessageDelivery?: GeneralMessageDelivery[];
+}
+
+@jsonObject
 export class ResponseStopMonitoringList {
     constructor(
         responseTimestamp: Date,
@@ -680,6 +792,16 @@ export class ResponseStopMonitoringList {
 
     @jsonArrayMember(GeneralMessageDelivery, { name: "GeneralMessageDelivery" })
     public generalMessageDelivery?: GeneralMessageDelivery[];
+}
+
+@jsonObject
+export class SpecializedResponseGeneralMessageList {
+    constructor(serviceDelivery: SpecializedResponseStopMonitoringList) {
+        this.serviceDelivery = serviceDelivery;
+    }
+
+    @jsonMember({ name: "ServiceDelivery" })
+    public serviceDelivery: SpecializedResponseStopMonitoringList;
 }
 
 @jsonObject

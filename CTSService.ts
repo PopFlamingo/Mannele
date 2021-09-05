@@ -3,9 +3,9 @@ import axios, { AxiosInstance } from "axios";
 import { setupCache } from "axios-cache-adapter";
 import { TypedJSON } from "typedjson";
 import {
-    ResponseGeneralMessageList,
+    SpecializedResponseGeneralMessageList,
     StopMonitoringDelivery,
-} from "./SIRITypesSpecialized";
+} from "./SIRITypes";
 
 const getKeyValue = (key: string) => (obj: Record<string, any>) => obj[key];
 
@@ -90,7 +90,7 @@ export class CTSService {
         });
         let data = response.data;
 
-        const serializer = new TypedJSON(ResponseGeneralMessageList);
+        const serializer = new TypedJSON(SpecializedResponseGeneralMessageList);
         let parsed = serializer.parse(data);
         if (parsed === undefined) {
             throw new Error("Could not parse response");
