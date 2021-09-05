@@ -795,7 +795,7 @@ export class ResponseStopMonitoringList {
 }
 
 @jsonObject
-export class SpecializedResponseGeneralMessageList {
+export class SpecializedStopMonitoringResponse {
     constructor(serviceDelivery: SpecializedResponseStopMonitoringList) {
         this.serviceDelivery = serviceDelivery;
     }
@@ -814,7 +814,7 @@ export class ResponseGeneralMessageList {
     public serviceDelivery: ResponseStopMonitoringList;
 }
 
-enum VehicleMode {
+export enum VehicleMode {
     Bus = "bus",
     Tram = "tram",
     Undefined = "undefined",

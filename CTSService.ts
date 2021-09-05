@@ -2,10 +2,7 @@ import { linesStations, stationCodes } from "./data";
 import axios, { AxiosInstance } from "axios";
 import { setupCache } from "axios-cache-adapter";
 import { TypedJSON } from "typedjson";
-import {
-    SpecializedResponseGeneralMessageList as SpecializedStopMonitoringResponse,
-    StopMonitoringDelivery,
-} from "./SIRITypes";
+import { SpecializedStopMonitoringResponse, VehicleMode } from "./SIRITypes";
 
 const getKeyValue = (key: string) => (obj: Record<string, any>) => obj[key];
 
@@ -17,7 +14,7 @@ export enum TransportType {
 
 export class LaneVisitsSchedule {
     name: string;
-    transportType: TransportType;
+    transportType: VehicleMode;
     directionRef: number;
     destinationName: string;
     via: string | undefined;
@@ -26,7 +23,7 @@ export class LaneVisitsSchedule {
     // Constructor
     constructor(
         name: string,
-        transportType: TransportType,
+        transportType: VehicleMode,
         directionRef: number,
         destinationName: string,
         via: string | undefined,
@@ -107,20 +104,20 @@ export class CTSService {
             params.append("MonitoringRef", code);
         }
 
-        let response = await this.api.get("/stop-monitoring", {
+        let rawResponse = await this.api.get("/stop-monitoring", {
             params: params,
         });
 
         // We use a strongly typed JSON parser to parse the response
         // which eliminates a lot of boilerplate code
         const serializer = new TypedJSON(SpecializedStopMonitoringResponse);
-        let parsed = serializer.parse(response.data);
-        if (parsed === undefined) {
+        let response = serializer.parse(rawResponse.data);
+        if (response === undefined) {
             throw new Error("Could not parse response");
         }
 
         let stopMonitoringDelivery =
-            parsed.serviceDelivery.stopMonitoringDelivery;
+            response.serviceDelivery.stopMonitoringDelivery;
 
         // Make sure there is exactly one element in the array
         // Currently the CTS API only returns one response per request
@@ -138,14 +135,7 @@ export class CTSService {
         let monitoredStopVisits = stopMonitoringDelivery[0].monitoredStopVisit;
 
         let collector: {
-            [key: string]: [
-                Date[],
-                string,
-                string,
-                string,
-                number,
-                string | undefined
-            ];
+            [key: string]: LaneVisitsSchedule;
         } = {};
 
         // This code loops over all the vehicle visits times and groups them
@@ -169,46 +159,27 @@ export class CTSService {
                 stopTime = info.monitoredCall.expectedArrivalTime;
             }
 
+            // The key is used to group the vehicle visits
             let key = `${info.publishedLineName}|${info.destinationName}|${info.vehicleMode}|${info.via}`;
 
-            // If the key is already in the collector, add the departure date to the array
+            // If the there is already a value for this key add the departure date to the array
             if (collector[key] !== undefined) {
-                collector[key][0].push(stopTime);
+                collector[key].departureDates.push(stopTime);
             } else {
-                collector[key] = [
-                    [stopTime],
+                // Otherwise create a new LaneVisitsSchedule object and associate it with the key
+                collector[key] = new LaneVisitsSchedule(
                     info.publishedLineName,
-                    info.destinationName,
                     info.vehicleMode,
                     info.directionRef,
+                    info.destinationName,
                     info.via,
-                ];
+                    [stopTime]
+                );
             }
         });
 
-        // Create an array of VehicleStop objects from the collector
-        let vehicleStops: LaneVisitsSchedule[] = [];
-        for (let key in collector) {
-            let [
-                departureDates,
-                publishedLineName,
-                destinationName,
-                vehicleMode,
-                directionRef,
-                via,
-            ] = collector[key];
-            vehicleStops.push(
-                new LaneVisitsSchedule(
-                    publishedLineName,
-                    vehicleMode as TransportType,
-                    directionRef,
-                    destinationName,
-                    via,
-                    departureDates
-                )
-            );
-        }
-        return vehicleStops;
+        // Return all values in the collector
+        return Object.values(collector);
     }
 }
 
