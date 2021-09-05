@@ -1,6 +1,8 @@
 import { linesStations, stationCodes } from "./data";
 import axios, { AxiosInstance } from "axios";
 import { setupCache } from "axios-cache-adapter";
+import { TypedJSON } from "typedjson";
+import { ResponseGeneralMessageList } from "./SIRITypes";
 
 const getKeyValue = (key: string) => (obj: Record<string, any>) => obj[key];
 
@@ -84,6 +86,13 @@ export class CTSService {
             params: params,
         });
         let data = response.data;
+
+        const serializer = new TypedJSON(ResponseGeneralMessageList);
+        try {
+            console.log(serializer.parse(data));
+        } catch (error) {
+            console.error(error);
+        }
 
         // Make sure response is not empty
         if (response === undefined) {
