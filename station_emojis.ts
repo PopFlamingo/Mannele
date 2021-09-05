@@ -74,7 +74,7 @@ export function emojiForStation(station: string): string | null {
         case "Rome":
             return "🇮🇹";
         case "Université":
-            return "";
+            return "🎓";
         case "Observatoire":
             return "🔭";
         case "Cité administrative":
