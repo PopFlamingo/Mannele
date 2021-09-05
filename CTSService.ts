@@ -1,6 +1,6 @@
-import { CTSRequestsCacher } from "./CTSRequestsCacher";
 import { linesStations, stationCodes } from "./data";
-import * as fs from "fs";
+import axios, { AxiosInstance } from "axios";
+import { setupCache } from "axios-cache-adapter";
 
 const getKeyValue = (key: string) => (obj: Record<string, any>) => obj[key];
 
@@ -10,7 +10,7 @@ export enum TransportType {
     bus = "bus",
 }
 
-export class VehicleStop {
+export class LaneDepartureSchedule {
     name: string;
     transportType: TransportType;
     directionRef: number;
@@ -38,13 +38,26 @@ export class VehicleStop {
 
 export class CTSService {
     constructor(token: string) {
-        this.cacher = new CTSRequestsCacher(token);
+        // Ensure responses are cached for 30 seconds
+        // to avoid hitting the CTS API too often
+        const cache = setupCache({ maxAge: 30 * 1000 });
+
+        // Create an axios instance to access the CTS API
+        this.api = axios.create({
+            adapter: cache.adapter,
+            baseURL: "https://api.cts-strasbourg.eu/v1/siri/2.0/",
+            auth: {
+                username: token,
+                password: "",
+            },
+        });
     }
-    private cacher: CTSRequestsCacher;
 
-    async getStopsForStation(stationName: string): Promise<VehicleStop[]> {
-        let url = "https://api.cts-strasbourg.eu/v1/siri/2.0/stop-monitoring";
+    private api: AxiosInstance;
 
+    async getStopsForStation(
+        stationName: string
+    ): Promise<LaneDepartureSchedule[]> {
         // Check stationCodes[stationName] is not undefined, otherwise throw an error
         if (stationCodes[stationName] === undefined) {
             throw new Error("Station not found");
@@ -62,25 +75,22 @@ export class CTSService {
             codesList = codesList.concat(codes);
         }
 
-        let first = true;
-        codesList.forEach((code) => {
-            if (first) {
-                url += "?";
-                first = false;
-            } else {
-                url += "&";
-            }
-            url += `MonitoringRef=${code}`;
-        });
+        let params = new URLSearchParams();
+        for (let code of codesList) {
+            params.append("MonitoringRef", code);
+        }
 
-        let response = await this.cacher.sendRequest(url);
+        let response = await this.api.get("/stop-monitoring", {
+            params: params,
+        });
+        let data = response.data;
 
         // Make sure response is not empty
         if (response === undefined) {
             throw new Error("No response");
         }
 
-        let serviceDelivery = response.ServiceDelivery;
+        let serviceDelivery = data.ServiceDelivery;
         if (serviceDelivery === undefined) {
             throw new Error("No service delivery");
         }
@@ -193,7 +203,7 @@ export class CTSService {
         });
 
         // Create an array of VehicleStop objects from the collector
-        let vehicleStops: VehicleStop[] = [];
+        let vehicleStops: LaneDepartureSchedule[] = [];
         for (let key in collector) {
             let [
                 departureDates,
@@ -204,7 +214,7 @@ export class CTSService {
                 via,
             ] = collector[key];
             vehicleStops.push(
-                new VehicleStop(
+                new LaneDepartureSchedule(
                     publishedLineName,
                     vehicleMode as TransportType,
                     directionRef,
@@ -218,7 +228,9 @@ export class CTSService {
     }
 }
 
-export function listVehicleStops(vehicleStops: VehicleStop[]): string {
+export function listVehicleStops(
+    vehicleStops: LaneDepartureSchedule[]
+): string {
     // Sort vehicleStops by directionRef
     vehicleStops.sort((a, b) => {
         if (a.directionRef < b.directionRef) {
