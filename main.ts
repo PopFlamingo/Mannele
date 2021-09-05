@@ -2,6 +2,7 @@
 import { Client, Intents } from "discord.js";
 import { CTSService, listVehicleStops } from "./CTSService";
 import { emojiForStation } from "./station_emojis";
+require("dotenv").config();
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 
