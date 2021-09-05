@@ -1,7 +1,9 @@
 // Import discordjs library
-import { Client, Intents } from "discord.js";
+import { Client, Intents, Collection, CommandInteraction } from "discord.js";
+import { BotServices } from "./BotServices";
+import { isCommandDescriptor } from "./CommandDescriptor";
 import { CTSService, listVehicleStops } from "./CTSService";
-import { emojiForStation } from "./station_emojis";
+import * as fs from "fs";
 require("dotenv").config();
 
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
@@ -17,68 +19,53 @@ if (ctsToken === undefined) {
     throw new Error("CTS_TOKEN environment variable is not defined");
 }
 
-const service = new CTSService(ctsToken);
+// Bot services is an object that is passed as an argument of
+// all command executors and contains all the services that the bot needs
+const botServices = new BotServices(new CTSService(ctsToken));
 
-client.once("ready", () => {
-    console.log("Bot started");
-});
+// Create a collection associating command (and subcommand) names with their executors
+const commands = new Collection<
+    string,
+    (interaction: CommandInteraction, services: BotServices) => Promise<void>
+>();
 
+// Get the file names of all the ts files in the commands directory and remove their extension
+const commandFiles = fs
+    .readdirSync("./commands")
+    .filter((file) => file.endsWith(".ts"))
+    .map((file: string) => file.slice(0, -3));
+
+// For each command file, log its default export (which should be a CommandDescriptor)
+for (const file of commandFiles) {
+    const defaultExport = require(`./commands/${file}`).default;
+    const instance = new defaultExport();
+    if (isCommandDescriptor(instance)) {
+        // Concatenate commandName and subCommandName to create a unique key
+        const key = `${instance.commandName}|${instance.subCommandName}`;
+        // Add the command to the commands collection
+        commands.set(key, instance.execute);
+    }
+}
+
+// Handle slash commands
 client.on("interactionCreate", async (interaction) => {
     if (!interaction.isCommand()) {
         return;
     }
-    try {
-        const { commandName } = interaction;
-        if (commandName == "horaires") {
-            if (interaction.options.getSubcommand() == "station") {
-                let station = interaction.options.getString("station");
-                if (station === null) {
-                    throw new Error("No station was provided");
-                }
-                let stops = await service.getStopsForStation(station);
-                let final = `__**Horaires pour la station *${station}***__`;
-                let emoji = emojiForStation(station);
-                if (emoji !== null) {
-                    final += `  ${emoji}`;
-                }
-                final += "\n";
-                // Count the number of unique types of vehicles
-                let types = new Set();
-                for (let stop of stops) {
-                    types.add(stop.transportType);
-                }
-                if (types.size == 1) {
-                    final += "\n" + listVehicleStops(stops);
-                } else {
-                    // Get only the "tram" vehicles
-                    let trams = stops.filter(
-                        (stop) => stop.transportType == "tram"
-                    );
-                    final += "\n**Trams  :tram: :**\n";
-                    final += listVehicleStops(trams);
+    let command = interaction.commandName;
+    let subcommand: string | null = interaction.options.getSubcommand();
 
-                    // Get only the "bus" vehicles
-                    let buses = stops.filter(
-                        (stop) => stop.transportType == "bus"
-                    );
-                    final += "\n\n**Bus  :bus: :**\n";
-                    final += listVehicleStops(buses);
-                }
-
-                interaction.reply(final);
-            } else {
-                interaction.reply(
-                    `Cette fonction n'est pas encore implémentée`
-                );
-            }
-        } else {
-            interaction.reply(`Cette fonction n'est pas encore implémentée`);
-        }
-    } catch (error) {
-        console.error(error);
-        interaction.reply(`Une erreur est survenue`);
+    // Concantenate commandName and subCommandName to create a unique key
+    // in order to retrieve the executor
+    const key = `${command}|${subcommand}`;
+    const executor = commands.get(key);
+    if (executor) {
+        executor(interaction, botServices);
     }
-    let sub = interaction.options.getSubcommand();
+});
+
+client.once("ready", () => {
+    console.log("Mannele is up and running!");
 });
 
 // Login to Discord
