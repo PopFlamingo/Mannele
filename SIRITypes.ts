@@ -706,6 +706,7 @@ export class SpecializedStopMonitoringDelivery {
 
     @jsonArrayMember(SpecializedMonitoredStopVisit, {
         name: "MonitoredStopVisit",
+        isRequired: true,
     })
     public monitoredStopVisit: SpecializedMonitoredStopVisit[];
 }

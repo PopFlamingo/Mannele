@@ -60,7 +60,15 @@ client.on("interactionCreate", async (interaction) => {
     const key = `${command}|${subcommand}`;
     const executor = commands.get(key);
     if (executor) {
-        executor(interaction, botServices);
+        try {
+            await executor(interaction, botServices);
+        } catch (error) {
+            let errorMessage = "Une erreur est survenue ! :slight_frown:\n";
+            errorMessage +=
+                "Cela peut être une erreur interne ou provenir d'un service que j'ai tenté de contacter.\n";
+            interaction.reply(errorMessage);
+            console.error(error);
+        }
     }
 });
 
