@@ -3,12 +3,14 @@ import {
     SlashCommandStringOption,
     SlashCommandSubcommandBuilder,
 } from "@discordjs/builders";
+import { stationCodes } from "./data";
 const { REST } = require("@discordjs/rest");
 const { Routes } = require("discord-api-types/v9");
+require("dotenv").config();
 
 // Load DISCORD_TOKEN from environment variables and throw an error if it's not set
-let tokenCTS = process.env.DISCORD_TOKEN;
-if (tokenCTS == null) {
+let discordToken = process.env.DISCORD_TOKEN;
+if (discordToken == null) {
     throw new Error("DISCORD_TOKEN environment variable not set");
 }
 
@@ -24,26 +26,19 @@ if (clientId == null) {
     throw new Error("CLIENT_ID environment variable not set");
 }
 
-let stations = [
-    "Esplanade",
-    "Université",
-    "Observatoire",
-    "Palerme",
-    "Rome",
-    "Cité administrative",
-];
+function makeStationTuplesArray(): [string, string][] {
+    // Get all keys of the stationCodes object
+    let stationCodesKeys = Object.keys(stationCodes);
+    // Sort them alphabetically
+    stationCodesKeys.sort();
+    // Create an array of tuples
+    let stationTuples: [string, string][] = [];
+    for (let i = 0; i < stationCodesKeys.length; i++) {
+        stationTuples.push([stationCodesKeys[i], stationCodesKeys[i]]);
+    }
 
-let stationsTuples: [string, string][] = [
-    ["Esplanade", "Esplanade"],
-    ["Université", "Université"],
-    ["Observatoire", "Observatoire"],
-    ["Palerme", "Palerme"],
-    ["Rome", "Rome"],
-    ["Cité administrative", "Cité administrative"],
-];
-
-// Sort stations by name
-stations.sort();
+    return stationTuples;
+}
 
 const commands = [
     new SlashCommandBuilder()
@@ -75,13 +70,13 @@ const commands = [
                     new SlashCommandStringOption()
                         .setName("station")
                         .setDescription("Station à afficher")
-                        .addChoices(stationsTuples)
+                        .addChoices(makeStationTuplesArray())
                         .setRequired(true)
                 )
         ),
 ].map((command) => command.toJSON());
 
-const rest = new REST({ version: "9" }).setToken(tokenCTS);
+const rest = new REST({ version: "9" }).setToken(discordToken);
 
 (async () => {
     try {
