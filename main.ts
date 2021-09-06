@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { Client, Intents, Collection, CommandInteraction } from "discord.js";
 import { BotServices } from "./BotServices";
-import { isCommandDescriptor } from "./CommandDescriptor";
+import { CommandDescriptor, isCommandDescriptor } from "./CommandDescriptor";
 import { CTSService } from "./CTSService";
 import * as fs from "fs";
 
@@ -25,10 +25,7 @@ if (ctsToken === undefined) {
 const botServices = new BotServices(new CTSService(ctsToken));
 
 // Create a collection associating command (and subcommand) names with their executors
-const commands = new Collection<
-    string,
-    (interaction: CommandInteraction, services: BotServices) => Promise<void>
->();
+const commands = new Collection<string, CommandDescriptor>();
 
 // Get the file names of all the ts files in the commands directory and remove their extension
 const commandFiles = fs
@@ -43,8 +40,18 @@ for (const file of commandFiles) {
         // Concatenate commandName and subCommandName to create a unique key
         const key = `${instance.commandName}|${instance.subCommandName}`;
         // Add the command to the commands collection
-        commands.set(key, instance.execute);
+        commands.set(key, instance);
     }
+}
+
+async function defaultErrorHandler(
+    error: unknown,
+    interaction: CommandInteraction
+) {
+    let errorMessage = "Une erreur est survenue ! :slight_frown:\n";
+    errorMessage +=
+        "Cela peut être une erreur interne ou provenir d'un service que j'ai tenté de contacter.\n";
+    await interaction.reply(errorMessage);
 }
 
 // Handle slash commands
@@ -58,16 +65,24 @@ client.on("interactionCreate", async (interaction) => {
     // Concantenate commandName and subCommandName to create a unique key
     // in order to retrieve the executor
     const key = `${command}|${subcommand}`;
-    const executor = commands.get(key);
-    if (executor) {
+    const commandDescriptor = commands.get(key);
+    if (commandDescriptor) {
         try {
-            await executor(interaction, botServices);
+            await commandDescriptor.execute(interaction, botServices);
         } catch (error) {
-            let errorMessage = "Une erreur est survenue ! :slight_frown:\n";
-            errorMessage +=
-                "Cela peut être une erreur interne ou provenir d'un service que j'ai tenté de contacter.\n";
-            interaction.reply(errorMessage);
-            console.error(error);
+            if (commandDescriptor.handleError !== undefined) {
+                try {
+                    await commandDescriptor.handleError(
+                        error,
+                        interaction,
+                        botServices
+                    );
+                } catch (error) {
+                    await defaultErrorHandler(error, interaction);
+                }
+            } else {
+                await defaultErrorHandler(error, interaction);
+            }
         }
     }
 });

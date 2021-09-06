@@ -13,6 +13,11 @@ export interface CommandDescriptor {
         interaction: CommandInteraction,
         services: BotServices
     ): Promise<void>;
+    handleError?: (
+        error: unknown,
+        interaction: CommandInteraction,
+        services: BotServices
+    ) => Promise<void>;
 }
 
 export function isCommandDescriptor(
