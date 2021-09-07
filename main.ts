@@ -60,7 +60,7 @@ client.on("interactionCreate", async (interaction) => {
         return;
     }
     let command = interaction.commandName;
-    let subcommand: string | null = interaction.options.getSubcommand();
+    let subcommand: string | null = interaction.options.getSubcommand(false);
 
     // Concantenate commandName and subCommandName to create a unique key
     // in order to retrieve the executor
