@@ -44,7 +44,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName("horaires")
         .setDescription(
-            "Affiche les horaires pour des lignes et station aux alentours de l'université"
+            "Horaires en direct pour lignes et stations. Données CTS."
         )
         /*
     .addSubcommand(
@@ -64,7 +64,7 @@ const commands = [
             new SlashCommandSubcommandBuilder()
                 .setName("station")
                 .setDescription(
-                    "Affiche les horaires pour une station aux alentours de l'université"
+                    "Affiche les horaires en direct pour une station (données CTS)"
                 )
                 .addStringOption(
                     new SlashCommandStringOption()
