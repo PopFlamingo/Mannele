@@ -58,6 +58,10 @@ const commands = [
                         .setRequired(true)
                 )
         ),
+
+    new SlashCommandBuilder()
+        .setName("sources")
+        .setDescription("Affiche les sources des données du robot"),
 ].map((command) => command.toJSON());
 
 const rest = new REST({ version: "9" }).setToken(discordToken);
