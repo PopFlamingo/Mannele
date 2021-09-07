@@ -52,6 +52,7 @@ export class CTSService {
                 username: token,
                 password: "",
             },
+            timeout: 8000,
         });
     }
 

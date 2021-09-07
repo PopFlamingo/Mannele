@@ -11,7 +11,6 @@ export default class CommandStationSchedule implements CommandDescriptor {
         interaction: CommandInteraction,
         services: BotServices
     ): Promise<void> {
-        console.log(interaction.guild);
         let message =
             "Application, produit ou service intégrant les informations ";
         message += "publiques d'horaires des lignes de bus et tramways ";
@@ -22,6 +21,6 @@ export default class CommandStationSchedule implements CommandDescriptor {
         message +=
             "direct depuis les serveurs de la CTS (< 30s) lors d'un appel à ";
         message += "une commande correspondante.";
-        interaction.reply({ content: message, ephemeral: true });
+        await interaction.editReply({ content: message });
     }
 }

@@ -46,6 +46,6 @@ export default class CommandStationSchedule implements CommandDescriptor {
             final += CTSService.formatStops(buses);
         }
 
-        interaction.reply(final);
+        await interaction.editReply(final);
     }
 }

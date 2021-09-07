@@ -51,7 +51,7 @@ async function defaultErrorHandler(
     let errorMessage = "Une erreur est survenue ! :slight_frown:\n";
     errorMessage +=
         "Cela peut être une erreur interne ou provenir d'un service que j'ai tenté de contacter.\n";
-    await interaction.reply(errorMessage);
+    await interaction.editReply(errorMessage);
 }
 
 // Handle slash commands
@@ -59,6 +59,7 @@ client.on("interactionCreate", async (interaction) => {
     if (!interaction.isCommand()) {
         return;
     }
+    await interaction.deferReply();
     let command = interaction.commandName;
     let subcommand: string | null = interaction.options.getSubcommand(false);
 
