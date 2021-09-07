@@ -46,20 +46,6 @@ const commands = [
         .setDescription(
             "Horaires en direct pour lignes et stations. Données CTS."
         )
-        /*
-    .addSubcommand(
-        new SlashCommandSubcommandBuilder()
-        .setName("ligne")
-        .setDescription("Affiche les horaires pour une ligne aux alentours de l'université")
-        .addStringOption(
-            new SlashCommandStringOption()
-            .setName("ligne")
-            .setDescription("Ligne à afficher")
-            .addChoices([["C","C"],["E","E"],["F","F"],["L1","L1"],["2","2"],["30","30"]])
-            .setRequired(true)
-        )
-    )
-    */
         .addSubcommand(
             new SlashCommandSubcommandBuilder()
                 .setName("station")
