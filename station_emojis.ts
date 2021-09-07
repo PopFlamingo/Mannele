@@ -79,6 +79,8 @@ export function emojiForStation(station: string): string | null {
             return "🔭";
         case "Cité administrative":
             return "🏢";
+        case "Campus d'Illkirch":
+            return "🔬";
         default:
             return null;
     }
