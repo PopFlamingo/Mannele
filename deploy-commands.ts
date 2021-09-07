@@ -43,9 +43,7 @@ function makeStationTuplesArray(): [string, string][] {
 const commands = [
     new SlashCommandBuilder()
         .setName("horaires")
-        .setDescription(
-            "Horaires en direct pour lignes et stations. Données CTS."
-        )
+        .setDescription("Horaires en direct pour la CTS")
         .addSubcommand(
             new SlashCommandSubcommandBuilder()
                 .setName("station")
