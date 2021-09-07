@@ -68,6 +68,19 @@ const rest = new REST({ version: "9" }).setToken(discordToken);
 
 (async () => {
     try {
+        await rest.put(Routes.applicationCommands(clientId), {
+            body: commands,
+        });
+
+        console.log("Successfully registered global application commands.");
+    } catch (error) {
+        console.error(error);
+    }
+})();
+
+/*
+(async () => {
+    try {
         await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
             body: commands,
         });
@@ -77,3 +90,4 @@ const rest = new REST({ version: "9" }).setToken(discordToken);
         console.error(error);
     }
 })();
+*/
