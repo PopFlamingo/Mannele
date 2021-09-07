@@ -30,6 +30,10 @@ export let stationCodes: { [key: string]: { [key: string]: string[] } } = {
     "Cité administrative": {
         bus: ["96A", "96B"],
     },
+    "Campus d'Illkirch": {
+        tram: ["75B", "75C"],
+        bus: ["75A", "75I"],
+    },
 };
 
 export let linesStations: { [key: string]: StationCodes[] } = {};
