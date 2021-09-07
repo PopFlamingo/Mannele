@@ -26,10 +26,10 @@ function getDayNightStatus(): DayNightStatus {
     let sunset = getSunset(lat, lon);
 
     // Dawn start
-    let dawnStart = addMinutes(sunrise, -45);
+    let dawnStart = addMinutes(sunrise, -15);
 
     // Dusk
-    let duskEnd = addMinutes(sunset, 45);
+    let duskEnd = addMinutes(sunset, 20);
 
     // Current time
     let now = new Date();
