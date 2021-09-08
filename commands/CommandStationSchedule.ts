@@ -48,4 +48,24 @@ export default class CommandStationSchedule implements CommandDescriptor {
 
         await interaction.editReply(final);
     }
+
+    handleError? = async (
+        error: unknown,
+        interaction: CommandInteraction,
+        services: BotServices
+    ): Promise<void> => {
+        console.error(error);
+        let anyError: any = error;
+        if (
+            anyError.isAxiosError ||
+            anyError.message === "CTS_PARSING_ERROR" ||
+            anyError.message === "CTS_TIME_ERROR"
+        ) {
+            let message =
+                "Les horaires de la CTS sont momentanément indisponibles.";
+            await interaction.editReply(message);
+        } else {
+            throw error;
+        }
+    };
 }

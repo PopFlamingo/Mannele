@@ -111,7 +111,11 @@ export class CTSService {
 
         // We use a strongly typed JSON parser to parse the response
         // which eliminates a lot of boilerplate code
-        const serializer = new TypedJSON(SpecializedStopMonitoringResponse);
+        const serializer = new TypedJSON(SpecializedStopMonitoringResponse, {
+            errorHandler: (error: Error) => {
+                throw new Error("CTS_PARSING_ERROR");
+            },
+        });
         let response = serializer.parse(rawResponse.data);
         if (response === undefined) {
             throw new Error("Could not parse response");
@@ -160,6 +164,17 @@ export class CTSService {
                 stopTime = info.monitoredCall.expectedArrivalTime;
             }
 
+            // If the stop time is more than 1 minute in the past or more than
+            // 5 hours in the future, we ignore it
+            // We are doing this to guard against cases where the API may return
+            // incoherent data, this often happens at night.
+            if (
+                stopTime.getTime() < Date.now() - 60000 ||
+                stopTime.getTime() > Date.now() + 5 * 3600 * 1000
+            ) {
+                return;
+            }
+
             // The key is used to group the vehicle visits
             let key = `${info.publishedLineName}|${info.destinationName}|${info.vehicleMode}|${info.via}`;
 
@@ -179,6 +194,15 @@ export class CTSService {
             }
         });
 
+        // Create an array with the values of the collector
+        let result = Object.values(collector);
+
+        // Remove all the lanes that have no visits
+        result = result.filter((lane) => lane.departureDates.length > 0);
+
+        if (result.length === 0) {
+            throw new Error("CTS_TIME_ERROR");
+        }
         // Return all values in the collector
         return Object.values(collector);
     }
