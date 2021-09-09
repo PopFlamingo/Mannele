@@ -13,6 +13,17 @@ export default class CommandStationSchedule implements CommandDescriptor {
         services: BotServices
     ): Promise<void> {
         let station = interaction.options.getString("station");
+
+        // Save some stats
+        services.stats.increment(
+            "COMMAND(horaires,station)",
+            interaction.user.id
+        );
+        services.stats.increment(
+            `COMMAND(horaires,station) ${station}`,
+            interaction.user.id
+        );
+
         if (station === null) {
             throw new Error("No station was provided");
         }

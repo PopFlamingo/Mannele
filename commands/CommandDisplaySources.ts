@@ -11,6 +11,7 @@ export default class CommandStationSchedule implements CommandDescriptor {
         interaction: CommandInteraction,
         services: BotServices
     ): Promise<void> {
+        services.stats.increment("COMMAND(sources)", interaction.user.id);
         let message =
             "Application, produit ou service intégrant les informations ";
         message += "publiques d'horaires des lignes de bus et tramways ";

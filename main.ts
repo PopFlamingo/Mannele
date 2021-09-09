@@ -4,6 +4,7 @@ import { BotServices } from "./BotServices";
 import { CommandDescriptor, isCommandDescriptor } from "./CommandDescriptor";
 import { CTSService } from "./CTSService";
 import * as fs from "fs";
+import { StatsService } from "./StatsService";
 
 require("dotenv").config();
 
@@ -20,9 +21,29 @@ if (ctsToken === undefined) {
     throw new Error("CTS_TOKEN environment variable is not defined");
 }
 
+// Check STATS_SLOT_COUNT environment variable exists and save it in a variable
+// otherwise throw an error
+let statsSlotCountString = process.env.STATS_SLOT_COUNT;
+if (statsSlotCountString === undefined) {
+    throw new Error("STATS_SLOT_COUNT environment variable is not defined");
+}
+
+let statsSlotCount = parseInt(statsSlotCountString);
+if (statsSlotCount === NaN) {
+    throw new Error("STATS_SLOT_COUNT environment variable is not a number");
+}
+
+// Check the slot count is >= 1
+if (statsSlotCount < 1) {
+    throw new Error("STATS_SLOT_COUNT environment variable is less than 1");
+}
+
 // Bot services is an object that is passed as an argument of
 // all command executors and contains all the services that the bot needs
-const botServices = new BotServices(new CTSService(ctsToken));
+const botServices = new BotServices(
+    new CTSService(ctsToken),
+    StatsService.load("./stats/", statsSlotCount)
+);
 
 // Create a collection associating command (and subcommand) names with their executors
 const commands = new Collection<string, CommandDescriptor>();
