@@ -38,11 +38,18 @@ if (statsSlotCount < 1) {
     throw new Error("STATS_SLOT_COUNT environment variable is less than 1");
 }
 
+// Check if the STATS_EXCLUDED_USERS environment variable is defined and save it
+// in a variable
+let statsExcludedUsersString = process.env.STATS_EXCLUDED_USERS;
+let excludedIDs: string[] = [];
+if (statsExcludedUsersString !== undefined) {
+    excludedIDs = statsExcludedUsersString.split(",");
+}
 // Bot services is an object that is passed as an argument of
 // all command executors and contains all the services that the bot needs
 const botServices = new BotServices(
     new CTSService(ctsToken),
-    StatsService.load("./stats/", statsSlotCount)
+    StatsService.load("./stats/", statsSlotCount, excludedIDs)
 );
 
 // Create a collection associating command (and subcommand) names with their executors

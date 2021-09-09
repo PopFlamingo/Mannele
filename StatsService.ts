@@ -25,12 +25,14 @@ class StatsInfo {
 
 @jsonObject
 export class StatsService {
-    constructor(slotCount: number) {
+    constructor(slotCount: number, excludedIDs: string[]) {
         this.slotCount = slotCount;
         this.stats = new Map<string, StatsInfo>();
+        this.exludedIDs = excludedIDs;
     }
 
-    basePath: string | undefined;
+    private exludedIDs: string[];
+    private basePath: string | undefined;
 
     @jsonMember
     public slotCount: number;
@@ -39,6 +41,9 @@ export class StatsService {
     public stats: Map<string, StatsInfo>;
 
     async increment(key: string, userID: string) {
+        if (this.exludedIDs.includes(userID)) {
+            return;
+        }
         let stats = this.stats.get(key);
         if (stats === undefined) {
             stats = new StatsInfo();
@@ -60,7 +65,11 @@ export class StatsService {
         }
     }
 
-    static load(basePath: string, slotCount: number): StatsService {
+    static load(
+        basePath: string,
+        slotCount: number,
+        excludedIDs: string[]
+    ): StatsService {
         // Get date as a dd-mm-yyyy string
         let date = new Date();
         let dateString =
@@ -82,9 +91,11 @@ export class StatsService {
             if (stats === undefined) {
                 throw new Error("Could not parse stats file");
             }
+            stats.slotCount = slotCount;
+            stats.exludedIDs = excludedIDs;
         } else {
             // If the file does not exist, create a new StatsService
-            stats = new StatsService(slotCount);
+            stats = new StatsService(slotCount, excludedIDs);
             // Save it to the file
             fs.writeFileSync(
                 basePath + "/" + dateString + ".json",
