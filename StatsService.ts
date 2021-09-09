@@ -1,5 +1,6 @@
 import "reflect-metadata";
-import fs from "fs";
+import fsOld from "fs";
+const fs = fsOld.promises;
 import {
     jsonObject,
     jsonMember,
@@ -33,6 +34,7 @@ export class StatsService {
 
     private exludedIDs: string[];
     private basePath: string | undefined;
+    private fileName: string | undefined;
 
     @jsonMember
     public slotCount: number;
@@ -44,6 +46,14 @@ export class StatsService {
         if (this.exludedIDs.includes(userID)) {
             return;
         }
+
+        let fileName = StatsService.getFileName();
+        // If we are in a new day, reset the stats
+        if (this.fileName !== fileName) {
+            this.stats = new Map<string, StatsInfo>();
+            this.fileName = fileName;
+        }
+
         let stats = this.stats.get(key);
         if (stats === undefined) {
             stats = new StatsInfo();
@@ -61,30 +71,23 @@ export class StatsService {
         let hashDigestNumber = parseInt(hashDigest.substr(-10), 16);
         stats.incrementSlot(`${hashDigestNumber % this.slotCount}`);
         if (this.basePath !== undefined) {
-            this.save(this.basePath);
+            await this.save(this.basePath);
         }
     }
 
-    static load(
+    static async load(
         basePath: string,
         slotCount: number,
         excludedIDs: string[]
-    ): StatsService {
+    ): Promise<StatsService> {
         // Get date as a dd-mm-yyyy string
-        let date = new Date();
-        let dateString =
-            date.getDate() +
-            "-" +
-            (date.getMonth() + 1) +
-            "-" +
-            date.getFullYear();
-
+        let fileName = StatsService.getFileName();
         let stats: StatsService | undefined;
         // If the file exists load its content and create a StatsService from it
         // using TypedJSON
-        if (fs.existsSync(basePath + "/" + dateString + ".json")) {
-            let statsFile = fs.readFileSync(
-                basePath + "/" + dateString + ".json",
+        try {
+            let statsFile = await fs.readFile(
+                basePath + "/" + fileName,
                 "utf8"
             );
             stats = TypedJSON.parse(statsFile, StatsService);
@@ -93,30 +96,26 @@ export class StatsService {
             }
             stats.slotCount = slotCount;
             stats.exludedIDs = excludedIDs;
-        } else {
+            stats.basePath = basePath;
+            stats.fileName = fileName;
+        } catch {
             // If the file does not exist, create a new StatsService
             stats = new StatsService(slotCount, excludedIDs);
             // Save it to the file
-            fs.writeFileSync(
-                basePath + "/" + dateString + ".json",
+            await fs.writeFile(
+                basePath + "/" + fileName,
                 TypedJSON.stringify(stats, StatsService)
             );
         }
         stats.basePath = basePath;
+        stats.fileName = fileName;
         return stats;
     }
 
-    save(basePath: string) {
-        // Save at current directory/basePath/
-        let date = new Date();
-        let dateString =
-            date.getDate() +
-            "-" +
-            (date.getMonth() + 1) +
-            "-" +
-            date.getFullYear();
-        fs.writeFileSync(
-            basePath + "/" + dateString + ".json",
+    async save(basePath: string) {
+        // Save file
+        await fs.writeFile(
+            basePath + "/" + this.fileName,
             TypedJSON.stringify(this, StatsService)
         );
     }
@@ -132,5 +131,16 @@ export class StatsService {
             sum += slot;
         }
         return sum;
+    }
+
+    static getFileName(): string {
+        let date = new Date();
+        let dateString =
+            date.getDate() +
+            "-" +
+            (date.getMonth() + 1) +
+            "-" +
+            date.getFullYear();
+        return dateString + ".json";
     }
 }
