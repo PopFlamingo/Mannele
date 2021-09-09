@@ -4,8 +4,6 @@ import { setupCache } from "axios-cache-adapter";
 import { TypedJSON } from "typedjson";
 import { SpecializedStopMonitoringResponse, VehicleMode } from "./SIRITypes";
 
-const getKeyValue = (key: string) => (obj: Record<string, any>) => obj[key];
-
 // Create and export an enum that stores either tram or bus
 export enum TransportType {
     tram = "tram",
