@@ -5,6 +5,7 @@ import { CommandDescriptor, isCommandDescriptor } from "./CommandDescriptor";
 import { CTSService } from "./CTSService";
 import * as fs from "fs";
 import { StatsService } from "./StatsService";
+import { createConnection } from "typeorm";
 
 require("dotenv").config();
 
@@ -48,6 +49,17 @@ require("dotenv").config();
     if (statsExcludedUsersString !== undefined) {
         excludedIDs = statsExcludedUsersString.split(",");
     }
+
+    let connection = await createConnection({
+        type: "postgres",
+        host: process.env.DB_HOST,
+        port: parseInt(process.env.DB_PORT || "-1"),
+        username: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: "mannele_db",
+        synchronize: true,
+    });
+
     // Bot services is an object that is passed as an argument of
     // all command executors and contains all the services that the bot needs
     const botServices = new BotServices(
