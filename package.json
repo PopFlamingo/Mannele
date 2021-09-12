@@ -12,6 +12,7 @@
     "author": "",
     "license": "MIT",
     "devDependencies": {
+        "@types/node": "^16.9.1",
         "typescript": "^4.4.2"
     },
     "dependencies": {
@@ -22,8 +23,10 @@
         "discord-api-types": "^0.22.0",
         "discord.js": "^13.1.0",
         "dotenv": "^10.0.0",
+        "pg": "^8.7.1",
         "reflect-metadata": "^0.1.13",
         "sunrise-sunset-js": "^2.2.1",
-        "typedjson": "^1.7.0"
+        "typedjson": "^1.7.0",
+        "typeorm": "^0.2.37"
     }
 }
