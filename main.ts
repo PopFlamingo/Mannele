@@ -77,6 +77,7 @@ require("dotenv").config();
         .map((file: string) => file.slice(0, -3));
 
     for (const file of commandFiles) {
+        console.log(file);
         const defaultExport = require(`./commands/${file}`).default;
         const instance = new defaultExport();
         if (isCommandDescriptor(instance)) {
@@ -111,7 +112,9 @@ require("dotenv").config();
         // in order to retrieve the executor
         const key = `${command}|${subcommand}`;
         const commandDescriptor = commands.get(key);
+        console.log(key);
         if (commandDescriptor) {
+            console.log("Found");
             try {
                 await commandDescriptor.execute(interaction, botServices);
             } catch (error) {

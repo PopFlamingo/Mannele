@@ -3,6 +3,7 @@ import axios, { AxiosInstance } from "axios";
 import { setupCache } from "axios-cache-adapter";
 import { TypedJSON } from "typedjson";
 import { SpecializedStopMonitoringResponse, VehicleMode } from "./SIRITypes";
+import fs from "fs";
 
 // Create and export an enum that stores either tram or bus
 export enum TransportType {
@@ -203,6 +204,14 @@ export class CTSService {
         }
         // Return all values in the collector
         return Object.values(collector);
+    }
+
+    async writeInfoMessage(): Promise<void> {
+        let response = await this.api.get("general-message");
+        // Stringify the response to make it easier to read
+        let message = JSON.stringify(response.data, null, 2);
+        // Write response content to /tmp/general-message.json
+        fs.writeFileSync("./general-message.json", message);
     }
 
     static formatStops(vehicleStops: LaneVisitsSchedule[]): string {

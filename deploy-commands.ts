@@ -62,10 +62,14 @@ const commands = [
     new SlashCommandBuilder()
         .setName("sources")
         .setDescription("Affiche les sources des données du robot"),
+
+    new SlashCommandBuilder()
+        .setName("testnewcommand")
+        .setDescription("Tests a new command"),
 ].map((command) => command.toJSON());
 
 const rest = new REST({ version: "9" }).setToken(discordToken);
-
+/*
 (async () => {
     try {
         await rest.put(Routes.applicationCommands(clientId), {
@@ -77,8 +81,8 @@ const rest = new REST({ version: "9" }).setToken(discordToken);
         console.error(error);
     }
 })();
+*/
 
-/*
 (async () => {
     try {
         await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
@@ -90,4 +94,3 @@ const rest = new REST({ version: "9" }).setToken(discordToken);
         console.error(error);
     }
 })();
-*/

@@ -1,0 +1,475 @@
+{
+    "ServiceDelivery": {
+        "ResponseTimestamp": "2021-09-13T01:02:00+02:00",
+        "RequestMessageRef": null,
+        "GeneralMessageDelivery": [
+            {
+                "version": "2.0",
+                "ResponseTimestamp": "2021-09-13T01:02:33+02:00",
+                "ShortestPossibleCycle": "PT30S",
+                "InfoMessage": [
+                    {
+                        "formatRef": "CTS",
+                        "RecordedAtTime": "2021-09-13T01:02:33+02:00",
+                        "ItemIdentifier": "D3511",
+                        "InfoMessageIdentifier": "D3511-1",
+                        "InfoChannelRef": "Works",
+                        "ValidUntilTime": "2021-09-25T01:59:59+02:00",
+                        "Content": {
+                            "ImpactStartDateTime": "2021-09-13T02:00:00+02:00",
+                            "ImpactEndDateTime": "2021-09-25T01:59:59+02:00",
+                            "ImpactedGroupOfLinesRef": null,
+                            "ImpactedLineRef": ["13"],
+                            "TypeOfPassengerEquipmentRef": "WEB",
+                            "Priority": "Urgent",
+                            "SendUpdatedNotificationsToCustomers": true,
+                            "Message": [
+                                {
+                                    "MessageZoneRef": "title",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Ligne 13 : arrêt Bâle déplacé",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "period",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Du 13/09/2021 au 24/09/2021",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "details",
+                                    "MessageText": [
+                                        {
+                                            "Value": "En raison de travaux, l'arrêt Bâle direction Illkirch fort Uhrich est déplacé à partir du lundi 13 septembre 2021 pour une durée indéterminée.<br /><br />Veuillez rejoindre l’arrêt provisoire situé à hauteur des 35/37 rue du Maréchal Foch.",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "formatRef": "CTS",
+                        "RecordedAtTime": "2021-09-13T01:02:33+02:00",
+                        "ItemIdentifier": "D3509",
+                        "InfoMessageIdentifier": "D3509-4",
+                        "InfoChannelRef": "Works",
+                        "ValidUntilTime": "2021-09-18T01:59:59+02:00",
+                        "Content": {
+                            "ImpactStartDateTime": "2021-09-13T02:00:00+02:00",
+                            "ImpactEndDateTime": "2021-09-18T01:59:59+02:00",
+                            "ImpactedGroupOfLinesRef": null,
+                            "ImpactedLineRef": ["29"],
+                            "TypeOfPassengerEquipmentRef": "WEB",
+                            "Priority": "Urgent",
+                            "SendUpdatedNotificationsToCustomers": true,
+                            "Message": [
+                                {
+                                    "MessageZoneRef": "title",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Ligne 29 : Arrêt Mathieu Zell déplacé",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "period",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Du 13/09/2021 au 17/09/2021",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "details",
+                                    "MessageText": [
+                                        {
+                                            "Value": "En raison de travaux, L'arrêt Mathieu Zell direction Schiltigheim Campus n’est pas desservi à partir du lundi 13 septembre 2021, pour une durée indéterminée.<br /><br />Veuillez rejoindre l’arrêt provisoire situé environ 30 mètres après l'arrêt habituel .",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "formatRef": "CTS",
+                        "RecordedAtTime": "2021-09-13T01:02:33+02:00",
+                        "ItemIdentifier": "D3495",
+                        "InfoMessageIdentifier": "D3495-18",
+                        "InfoChannelRef": "PlannedDisruption",
+                        "ValidUntilTime": "2021-09-14T01:59:59+02:00",
+                        "Content": {
+                            "ImpactStartDateTime": "2021-09-03T02:00:00+02:00",
+                            "ImpactEndDateTime": "2021-09-14T01:59:59+02:00",
+                            "ImpactedGroupOfLinesRef": null,
+                            "ImpactedLineRef": ["B", "E", "H"],
+                            "TypeOfPassengerEquipmentRef": "WEB",
+                            "Priority": "Urgent",
+                            "SendUpdatedNotificationsToCustomers": true,
+                            "Message": [
+                                {
+                                    "MessageZoneRef": "title",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Foire Européenne du 3 au 13 septembre 2021",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "period",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Du 03/09/2021 au 13/09/2021",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "details",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Pour vous rendre à la Foire Européenne qui a lieu du 3 au 13 septembre 2021, utilisez les transports en commun, solution économique, rapide et écologique.<br /><br />Plus d'infos sur :<br /><a href='https://cts-strasbourg.eu/fr/Article/FOIRE-EUROPEENNE-2021/'>https://cts-strasbourg.eu/fr/Article/FOIRE-EUROPEENNE-2021/</a>",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "formatRef": "CTS",
+                        "RecordedAtTime": "2021-09-13T01:02:33+02:00",
+                        "ItemIdentifier": "D3491",
+                        "InfoMessageIdentifier": "D3491-22",
+                        "InfoChannelRef": "Works",
+                        "ValidUntilTime": "2022-01-01T00:59:59+01:00",
+                        "Content": {
+                            "ImpactStartDateTime": "2021-08-19T02:00:00+02:00",
+                            "ImpactEndDateTime": "2022-01-01T00:59:59+01:00",
+                            "ImpactedGroupOfLinesRef": null,
+                            "ImpactedLineRef": ["N1"],
+                            "TypeOfPassengerEquipmentRef": "WEB",
+                            "Priority": "Urgent",
+                            "SendUpdatedNotificationsToCustomers": true,
+                            "Message": [
+                                {
+                                    "MessageZoneRef": "title",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Ligne N1 : Arrêt Cité Universitaire non desservi",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "period",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Du 19/08/2021 au 31/12/2021",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "details",
+                                    "MessageText": [
+                                        {
+                                            "Value": "En raison de travaux, la ligne N1 est déviée entre les arrêts Cimetière Nord et Boecklin à partir du jeudi 19 août 2021 pour une durée indéterminée.<br /><br />De ce fait, l'arrêt Cité Universitaire direction Boecklin n’est pas desservi.<br />",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "formatRef": "CTS",
+                        "RecordedAtTime": "2021-09-13T01:02:33+02:00",
+                        "ItemIdentifier": "D3429",
+                        "InfoMessageIdentifier": "D3429-85",
+                        "InfoChannelRef": "Works",
+                        "ValidUntilTime": "2021-10-09T01:59:59+02:00",
+                        "Content": {
+                            "ImpactStartDateTime": "2021-06-21T02:00:00+02:00",
+                            "ImpactEndDateTime": "2021-10-09T01:59:59+02:00",
+                            "ImpactedGroupOfLinesRef": null,
+                            "ImpactedLineRef": ["71", "75"],
+                            "TypeOfPassengerEquipmentRef": "WEB",
+                            "Priority": "Urgent",
+                            "SendUpdatedNotificationsToCustomers": true,
+                            "Message": [
+                                {
+                                    "MessageZoneRef": "title",
+                                    "MessageText": [
+                                        {
+                                            "Value": "DESSERTE D’ECKWERSHEIM MODIFIÉE ",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "period",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Du 21/06/2021 au 08/10/2021",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "details",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Les travaux de voirie entraînant la fermeture de la circulation générale de la RD 226 entre Vendenheim et Eckwersheim sont prolongés prévisionnellement jusqu’au vendredi 8 octobre 2021 inclus. <br /><br />Par conséquent, les dispositions en cours depuis le 21 juin sont prolongées jusqu’au vendredi 8 octobre 2021, à savoir : <br />les lignes  71  et  75  sont interrompues et circulent uniquement entre les arrêts Les Halles Sébastopol et Hohl.<br /><br />Néanmoins à partir du jeudi 2 septembre, du lundi au vendredi, 2 bus de la ligne 75 effectuent un trajet entre les arrêts Les Halles Sébastopol et Canal à Eckwersheim selon le même itinéraire que la navette entre les arrêts Hohl et Canal :<br /><br />- le bus partant à 11h45 de l'arrêt les Halles Sébastopol (arrivée à l'arrêt Canal à 12h41).<br /><br />- le bus arrivant à l'arrêt Les Halles Sébastopol à 13h35 (départ de l'arrêt Canal à 12h36).<br /><br />Consultez notre actualité pour plus d'informations : <br /><a href='https://cts-strasbourg.eu/fr/Article/Desserte-dEckwersheim-modifiee-cet-ete/#'>https://cts-strasbourg.eu/fr/Article/Desserte-dEckwersheim-modifiee-cet-ete/#</a>",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "formatRef": "CTS",
+                        "RecordedAtTime": "2021-09-13T01:02:33+02:00",
+                        "ItemIdentifier": "D3419",
+                        "InfoMessageIdentifier": "D3419-95",
+                        "InfoChannelRef": "Works",
+                        "ValidUntilTime": "2021-10-09T01:59:59+02:00",
+                        "Content": {
+                            "ImpactStartDateTime": "2021-06-21T02:00:00+02:00",
+                            "ImpactEndDateTime": "2021-10-09T01:59:59+02:00",
+                            "ImpactedGroupOfLinesRef": null,
+                            "ImpactedLineRef": ["Al&Rtour"],
+                            "TypeOfPassengerEquipmentRef": "WEB",
+                            "Priority": "Urgent",
+                            "SendUpdatedNotificationsToCustomers": true,
+                            "Message": [
+                                {
+                                    "MessageZoneRef": "title",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Service scolaire Al&Rtour direction Lycée Kléber",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "period",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Du 21/06/2021 au 08/10/2021",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "details",
+                                    "MessageText": [
+                                        {
+                                            "Value": "En raison d’importants travaux de voirie entraînant une fermeture de la circulation du lundi 21 juin au vendredi 8 octobre 2021 inclus, les horaires du service scolaire Al&Rtour à destination du Lycée Kléber sont avancés de 20 minutes aux arrêts ci-dessous : <br />- Arrêt Eckwersheim Hippodrome à 6h56 <br />- Arrêt\tEckwersheim Cimetière à 6h57 <br />- Arrêt Eckwersheim Mairie à 6h58 <br />- Arrêt Canal à 6h59<br />Consultez notre actualité pour plus d'informations : <br /><a href='https://cts-strasbourg.eu/fr/Article/Desserte-dEckwersheim-modifiee-cet-ete/'>https://cts-strasbourg.eu/fr/Article/Desserte-dEckwersheim-modifiee-cet-ete/</a>",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "formatRef": "CTS",
+                        "RecordedAtTime": "2021-09-13T01:02:33+02:00",
+                        "ItemIdentifier": "D3340",
+                        "InfoMessageIdentifier": "D3340-175",
+                        "InfoChannelRef": "Works",
+                        "ValidUntilTime": "2021-11-01T00:59:59+01:00",
+                        "Content": {
+                            "ImpactStartDateTime": "2021-02-19T01:00:00+01:00",
+                            "ImpactEndDateTime": "2021-11-01T00:59:59+01:00",
+                            "ImpactedGroupOfLinesRef": null,
+                            "ImpactedLineRef": ["14", "24"],
+                            "TypeOfPassengerEquipmentRef": "WEB",
+                            "Priority": "Urgent",
+                            "SendUpdatedNotificationsToCustomers": true,
+                            "Message": [
+                                {
+                                    "MessageZoneRef": "title",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Ligne 14/24 : arrêts Mulhouse et Neudorf Marché non desservis",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "period",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Du 19/02/2021 au 31/10/2021",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "details",
+                                    "MessageText": [
+                                        {
+                                            "Value": "En raison de travaux, la ligne 14/24 est déviée et ne dessert pas les arrêts Mulhouse et Neudorf Marché direction Neuhof Lorient / La Rochelle / Neuhof Stéphanie, à partir du vendredi 19 février 2021, pour une durée indéterminée.<br /><br />Arrêt Mulhouse : Veuillez rejoindre l’arrêt Etoile Polygone.<br /><br />Arrêt Neudorf Marché : Veuillez rejoindre l’arrêt Neudorf Marché de la ligne de nuit N2 situé au début de la rue de Rathsamhausen.",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "formatRef": "CTS",
+                        "RecordedAtTime": "2021-09-13T01:02:33+02:00",
+                        "ItemIdentifier": "D3306",
+                        "InfoMessageIdentifier": "D3306-176",
+                        "InfoChannelRef": "Works",
+                        "ValidUntilTime": "2021-12-21T00:59:59+01:00",
+                        "Content": {
+                            "ImpactStartDateTime": "2020-11-19T01:00:00+01:00",
+                            "ImpactEndDateTime": "2021-12-21T00:59:59+01:00",
+                            "ImpactedGroupOfLinesRef": null,
+                            "ImpactedLineRef": ["N3"],
+                            "TypeOfPassengerEquipmentRef": "WEB",
+                            "Priority": "Urgent",
+                            "SendUpdatedNotificationsToCustomers": true,
+                            "Message": [
+                                {
+                                    "MessageZoneRef": "title",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Ligne N3: arrêts Camping et Nid de Cigognes non desservis",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "period",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Du 19/11/2020 au 20/12/2021",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "details",
+                                    "MessageText": [
+                                        {
+                                            "Value": "En raison de travaux, les arrêts Camping et Nid de Cigognes ne sont pas desservis par la ligne de nuit N3 à partir du jeudi 19 novembre 2020, pour une durée indéterminée. <br /><br />Veuillez rejoindre l’arrêt Montagne Verte ou l’arrêt Schnokeloch. <br />Ces arrêts restent desservis normalement par les lignes L1 et 2.",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "formatRef": "CTS",
+                        "RecordedAtTime": "2021-07-02T09:29:00+02:00",
+                        "ItemIdentifier": "1956401106",
+                        "InfoMessageIdentifier": "d1956401106-737005241-1",
+                        "InfoChannelRef": "Works",
+                        "ValidUntilTime": "2021-10-31T02:00:00+02:00",
+                        "Content": {
+                            "ImpactStartDateTime": "2021-07-02T09:29:39+02:00",
+                            "ImpactEndDateTime": "2021-10-31T02:00:00+02:00",
+                            "ImpactedGroupOfLinesRef": null,
+                            "ImpactedLineRef": ["14", "24"],
+                            "TypeOfPassengerEquipmentRef": "WEB",
+                            "Priority": "Urgent",
+                            "SendUpdatedNotificationsToCustomers": false,
+                            "Message": [
+                                {
+                                    "MessageZoneRef": "title",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Travaux Bus 14, 24",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "period",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Vendredi 2 juillet 2021",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "details",
+                                    "MessageText": [
+                                        {
+                                            "Value": "<p>Lignes 14 et 24 : En raison de  travaux, arrêts Mulhouse et Neudorf Marché non desservis pour une durée indéterminée en direction de La Rochelle et Neuhof Stéphanie.</p><br />",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "formatRef": "CTS",
+                        "RecordedAtTime": "2021-08-16T04:00:00+02:00",
+                        "ItemIdentifier": "1473469690",
+                        "InfoMessageIdentifier": "d1982059574-1294505028-1",
+                        "InfoChannelRef": "Information",
+                        "ValidUntilTime": "2021-09-30T02:00:00+02:00",
+                        "Content": {
+                            "ImpactStartDateTime": "2021-08-16T04:00:00+02:00",
+                            "ImpactEndDateTime": "2021-09-30T02:00:00+02:00",
+                            "ImpactedGroupOfLinesRef": null,
+                            "ImpactedLineRef": ["L6"],
+                            "TypeOfPassengerEquipmentRef": "WEB",
+                            "Priority": "Urgent",
+                            "SendUpdatedNotificationsToCustomers": false,
+                            "Message": [
+                                {
+                                    "MessageZoneRef": "details",
+                                    "MessageText": [
+                                        {
+                                            "Value": "<p>Dès lundi 16/08, l'arrêt Tribunal Fonderie vers Pt Phario, n'est plus desservi définitivement.\nNouvel arrêt \"Broglie\" desservi en remplacement :\nsitué au n° 18 rue de la Nuée-Bleue, à proximité de la place Broglie et de la station tram des lignes B, C et F.</p><br />",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "period",
+                                    "MessageText": [
+                                        {
+                                            "Value": "",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "MessageZoneRef": "title",
+                                    "MessageText": [
+                                        {
+                                            "Value": "Ligne L6",
+                                            "Lang": "FR"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+    }
+}
