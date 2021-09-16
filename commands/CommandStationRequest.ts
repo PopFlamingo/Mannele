@@ -22,6 +22,18 @@ export default class CommandStationRequest implements CommandDescriptor {
         if (stationParameter === null || stationParameter === "") {
             throw new Error("No station was provided");
         }
+
+        let matches =
+            (await services.cts.getStopCodesMatches(stationParameter)) || [];
+
+        if (matches.length < 1) {
+            throw new Error("STATION_NOT_FOUND");
+        } else if (matches.length === 1) {
+            
+        } else {
+
+        }
+
         await interaction.editReply(
             await services.cts.getFormattedScheduleForStation(stationParameter)
         );

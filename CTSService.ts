@@ -389,10 +389,21 @@ export class CTSService {
         return nextString.replace(/[^a-z0-9]/g, "");
     }
 
-    // Get the stop codes associated with a stop name
     async getStopCodes(
         stopName: string
     ): Promise<[string, string[]] | undefined> {
+        let maybeMatch = await this.getStopCodesMatches(stopName);
+        if (maybeMatch === undefined) {
+            return undefined;
+        } else {
+            return maybeMatch[0];
+        }
+    }
+
+    // Get the stop codes associated with a stop name
+    async getStopCodesMatches(
+        stopName: string
+    ): Promise<[string, string[]][] | undefined> {
         // Normalize the stop name
         stopName = CTSService.normalize(stopName);
         // Count the number of keys stopCodes has
@@ -414,14 +425,18 @@ export class CTSService {
             return a.length - b.length;
         });
 
-        let firstMatch = matches[0];
-
         // If there is no match, return undefined
-        if (firstMatch === undefined) {
+        if (matches.length === 0) {
             return undefined;
         }
 
         // Return the value associated with the key
-        return this.stopCodes.get(firstMatch);
+        return matches.map((match) => {
+            let value = this.stopCodes.get(match);
+            if (value === undefined) {
+                throw Error("Unexpected undefined value");
+            }
+            return value;
+        });
     }
 }
