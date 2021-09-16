@@ -27,7 +27,7 @@ export let stationCodes: { [key: string]: { [key: string]: string[] } } = {
     Rome: {
         bus: ["543A", "543B"],
     },
-    "Cité administrative": {
+    "Cité Administrative": {
         bus: ["96A", "96B"],
     },
     "Campus d'Illkirch": {

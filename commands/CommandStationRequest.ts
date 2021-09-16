@@ -4,30 +4,24 @@ import { CTSService, LaneVisitsSchedule } from "../CTSService";
 import { emojiForStation } from "../station_emojis";
 import { BotServices } from "../BotServices";
 
-export default class CommandStationSchedule implements CommandDescriptor {
+export default class CommandStationRequest implements CommandDescriptor {
     commandName: string = "horaires";
-    subCommandName: string = "station";
+    subCommandName: string = "requête";
 
     async execute(
         interaction: CommandInteraction,
         services: BotServices
     ): Promise<void> {
-        let stationParameter = interaction.options.getString("station");
-
+        let stationParameter = interaction.options.getString("requête");
         // Save some stats
         services.stats.increment(
-            "COMMAND(horaires,station)",
-            interaction.user.id
-        );
-        services.stats.increment(
-            `COMMAND(horaires,station) ${stationParameter}`,
+            "COMMAND(horaires,requête)",
             interaction.user.id
         );
 
-        if (stationParameter === null) {
+        if (stationParameter === null || stationParameter === "") {
             throw new Error("No station was provided");
         }
-
         await interaction.editReply(
             await services.cts.getFormattedScheduleForStation(stationParameter)
         );
@@ -38,18 +32,17 @@ export default class CommandStationSchedule implements CommandDescriptor {
         interaction: CommandInteraction,
         services: BotServices
     ): Promise<void> => {
-        console.error(error);
-        let anyError: any = error;
-        if (
-            anyError.isAxiosError ||
-            anyError.message === "CTS_PARSING_ERROR" ||
-            anyError.message === "CTS_TIME_ERROR"
-        ) {
-            let message =
-                "Les horaires de la CTS sont momentanément indisponibles.";
-            await interaction.editReply(message);
-        } else {
-            throw error;
+        if (error instanceof Error) {
+            if (error.message === "STATION_NOT_FOUND") {
+                let text = "La station demandée n'existe pas. ";
+                text +=
+                    "Vérifiez que vous n'avez pas fait d'erreur dans le nom ";
+                text +=
+                    "car je ne sais pas très bien les corriger pour le moment.";
+                await interaction.editReply(text);
+                return;
+            }
         }
+        throw error;
     };
 }

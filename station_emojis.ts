@@ -77,10 +77,28 @@ export function emojiForStation(station: string): string | null {
             return "🎓";
         case "Observatoire":
             return "🔭";
-        case "Cité administrative":
+        case "Cité Administrative":
             return "🏢";
         case "Campus d'Illkirch":
             return "🔬";
+        case "Musée d'Art Moderne":
+            return "🧑‍🎨";
+        case "Homme de Fer":
+            return "⚔️";
+        case "Londres":
+            return "🇬🇧";
+        case "Port du Rhin":
+            return "⚓️";
+        case "Jean Jaures":
+            return "🌹";
+        case "Winston Churchill":
+            return "🇬🇧";
+        case "Kehl Bahnhof":
+            return "🇩🇪 🚉";
+        case "Hochschule / Läger":
+            return "🇩🇪 🎓";
+        case "Kehl Rathaus":
+            return "🇩🇪 🏛️";
         default:
             return null;
     }

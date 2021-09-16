@@ -3,6 +3,9 @@ import axios, { AxiosInstance } from "axios";
 import { setupCache } from "axios-cache-adapter";
 import { TypedJSON } from "typedjson";
 import { SpecializedStopMonitoringResponse, VehicleMode } from "./SIRITypes";
+import csv from "csv-parser";
+import fs from "fs";
+import { emojiForStation } from "./station_emojis";
 
 // Create and export an enum that stores either tram or bus
 export enum TransportType {
@@ -37,13 +40,13 @@ export class LaneVisitsSchedule {
 }
 
 export class CTSService {
-    constructor(token: string) {
+    static async make(token: string): Promise<CTSService> {
         // Ensure responses are cached for 30 seconds
         // to avoid hitting the CTS API too often
         const cache = setupCache({ maxAge: 30 * 1000 });
 
         // Create an axios instance to access the CTS API
-        this.api = axios.create({
+        let api = axios.create({
             adapter: cache.adapter,
             baseURL: "https://api.cts-strasbourg.eu/v1/siri/2.0/",
             auth: {
@@ -52,12 +55,114 @@ export class CTSService {
             },
             timeout: 8000,
         });
+
+        let stopCodes = new Map<string, [string, string[]]>();
+
+        let stream = fs
+            .createReadStream("./resources/stops.csv")
+            .pipe(csv())
+            .on("data", (data: any) => {
+                // Get name from fifth column and normalize it
+                let name = data.stop_name;
+                let normalizedName = CTSService.normalize(name);
+                let stopCode = data.stop_code;
+
+                let value = stopCodes.get(normalizedName);
+                // If the array doesn't exist yet, create it
+                if (value === undefined) {
+                    value = [name, []];
+                    stopCodes.set(normalizedName, value);
+                }
+
+                // Add the stop code to the array if it doesn't exist yet
+                if (value[1].indexOf(stopCode) === -1) {
+                    value[1].push(stopCode);
+                }
+            });
+
+        // Wait for the stream to finish
+        return new Promise((resolve, reject) => {
+            stream.on("end", () => {
+                resolve(new CTSService(api, stopCodes));
+            });
+
+            // Handle errors
+            stream.on("error", (err: any) => {
+                reject(err);
+            });
+        });
+    }
+
+    private constructor(
+        api: AxiosInstance,
+        stopCodes: Map<string, [string, string[]]>
+    ) {
+        this.api = api;
+        this.stopCodes = stopCodes;
     }
 
     private api: AxiosInstance;
 
+    // A map of array of stop codes, where keys are
+    // normalized stop names
+    private stopCodes: Map<string, [string, string[]]> = new Map();
+
+    async getFormattedScheduleForStation(
+        stationParameter: string
+    ): Promise<string> {
+        let queryResult = await this.getVisitsForStation(stationParameter);
+        let name = queryResult[0];
+        let stops = queryResult[1];
+        let final = `__**Horaires pour la station *${name}***__`;
+        let emoji = emojiForStation(name);
+        if (emoji !== null) {
+            final += `  ${emoji}`;
+        }
+        final += "\n";
+        // Count the number of unique types of vehicles
+        let types = new Set();
+        for (let stop of stops) {
+            types.add(stop.transportType);
+        }
+        if (types.size == 1) {
+            final += "\n" + CTSService.formatStops(stops);
+        } else {
+            // Get only the "tram" vehicles
+            let trams = stops.filter(
+                (stop: LaneVisitsSchedule) => stop.transportType == "tram"
+            );
+            final += "\n**Trams  :tram: :**\n";
+            final += CTSService.formatStops(trams);
+
+            // Get only the "bus" vehicles
+            let buses = stops.filter(
+                (stop: LaneVisitsSchedule) => stop.transportType == "bus"
+            );
+            final += "\n\n**Bus  :bus: :**\n";
+            final += CTSService.formatStops(buses);
+        }
+
+        return final;
+    }
+
     async getVisitsForStation(
         stationName: string
+    ): Promise<[string, LaneVisitsSchedule[]]> {
+        // Array that will store all stop codes for the station
+        let queryResult = await this.getStopCodes(stationName);
+
+        if (queryResult === undefined) {
+            throw new Error("STATION_NOT_FOUND");
+        }
+
+        let readableName = queryResult[0];
+        let codesList = queryResult[1];
+
+        return [readableName, await this.getVisitsForStopCodes(codesList)];
+    }
+
+    async getVisitsForStopCodes(
+        stopCodes: string[]
     ): Promise<LaneVisitsSchedule[]> {
         // Note the difference between a stop and a station:
         // A stop is a place where a tram or a bus passes in a specific
@@ -68,38 +173,11 @@ export class CTSService {
         // still implicitly refer to specific stops by stating their
         // destination name, lane and transport type.
 
-        // Check there we have corresponding stop codes for
-        // the requested station name
-        if (stationCodes[stationName] === undefined) {
-            throw new Error("Station not found");
-        }
-
-        // Array containing all the transport kinds
-        let kinds = Object.values(TransportType);
-
-        // Array that will store all stop codes for the station
-        let codesList: string[] = [];
-
-        // Aggregate the codes from all types of transport (ie: get
-        // codes for both tram and bus stops at the selected station).
-        // We are requesting stop times for all kinds of transports at once
-        // and we only differentiate them in the response processing code.
-        // This is a deliberate choice as this would otherwise require
-        // multiple requests for the same station (one per transport type)
-        // which is not ideal in terms of performance and pressure on the CTS API.
-        for (let kind of kinds) {
-            let codes = stationCodes[stationName][kind];
-            if (codes === undefined) {
-                continue;
-            }
-            codesList = codesList.concat(codes);
-        }
-
         // We query the CTS API for all the stop codes for the station
         // so we actually need to repeat the MonitoringRef query parameter
         // for each stop code.
         let params = new URLSearchParams();
-        for (let code of codesList) {
+        for (let code of stopCodes) {
             params.append("MonitoringRef", code);
         }
 
@@ -281,5 +359,69 @@ export class CTSService {
         }
 
         return result;
+    }
+
+    // A private static method for normalizing stop names
+    // We normalize the stop name by doing the following transformations:
+    // - Lowercase it
+    // - Remove accents
+    // - Remove all non-alphanumeric characters, such as spaces, dots, etc.
+    // - Remove all character repetition sequences ("ll" become "l" for example)
+    static normalize(stopName: string): string {
+        let lowerCaseNoAccents = stopName
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
+
+        let lastCharacter = "";
+        let nextString = "";
+
+        for (let i = 0; i < lowerCaseNoAccents.length; i++) {
+            let currentCharacter = lowerCaseNoAccents[i];
+            if (currentCharacter == lastCharacter) {
+                continue;
+            } else {
+                nextString += currentCharacter;
+            }
+            lastCharacter = currentCharacter;
+        }
+
+        return nextString.replace(/[^a-z0-9]/g, "");
+    }
+
+    // Get the stop codes associated with a stop name
+    async getStopCodes(
+        stopName: string
+    ): Promise<[string, string[]] | undefined> {
+        // Normalize the stop name
+        stopName = CTSService.normalize(stopName);
+        // Count the number of keys stopCodes has
+        let stopCodesCount = this.stopCodes.size;
+
+        let matches: string[] = [];
+
+        // For each key in the stopCodes map, check if it contains the stop name
+        // if it does, return the value associated with the key
+        for (let key of this.stopCodes.keys()) {
+            // Check if key string contains the stop name
+            if (key.includes(stopName)) {
+                matches.push(key);
+            }
+        }
+
+        // Sort matches by length, shortest first
+        matches.sort((a, b) => {
+            return a.length - b.length;
+        });
+
+        let firstMatch = matches[0];
+
+        // If there is no match, return undefined
+        if (firstMatch === undefined) {
+            return undefined;
+        }
+
+        // Return the value associated with the key
+        return this.stopCodes.get(firstMatch);
     }
 }

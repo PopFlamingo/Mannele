@@ -51,7 +51,7 @@ require("dotenv").config();
     // Bot services is an object that is passed as an argument of
     // all command executors and contains all the services that the bot needs
     const botServices = new BotServices(
-        new CTSService(ctsToken),
+        await CTSService.make(ctsToken),
         await StatsService.load("./stats/", statsSlotCount, excludedIDs)
     );
 

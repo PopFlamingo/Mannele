@@ -44,6 +44,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName("horaires")
         .setDescription("Horaires en direct pour la CTS")
+        /*
         .addSubcommand(
             new SlashCommandSubcommandBuilder()
                 .setName("station")
@@ -57,19 +58,34 @@ const commands = [
                         .addChoices(makeStationTuplesArray())
                         .setRequired(true)
                 )
+        )
+        */
+        .addSubcommand(
+            new SlashCommandSubcommandBuilder()
+                .setName("requête")
+                .setDescription(
+                    "Affiche les horaires en direct pour une station personnalisée (données CTS)"
+                )
+                .addStringOption(
+                    new SlashCommandStringOption()
+                        .setName("requête")
+                        .setDescription("Nom de la station personnalisée")
+                        .setRequired(true)
+                )
         ),
-
+    /*
     new SlashCommandBuilder()
         .setName("sources")
         .setDescription("Affiche les sources des données du robot"),
+        */
 ].map((command) => command.toJSON());
 
 const rest = new REST({ version: "9" }).setToken(discordToken);
-
+/*
 (async () => {
     try {
         await rest.put(Routes.applicationCommands(clientId), {
-            body: commands,
+            body: [],
         });
 
         console.log("Successfully registered global application commands.");
@@ -77,8 +93,7 @@ const rest = new REST({ version: "9" }).setToken(discordToken);
         console.error(error);
     }
 })();
-
-/*
+*/
 (async () => {
     try {
         await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
@@ -90,4 +105,3 @@ const rest = new REST({ version: "9" }).setToken(discordToken);
         console.error(error);
     }
 })();
-*/
