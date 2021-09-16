@@ -48,6 +48,15 @@ require("dotenv").config();
     if (statsExcludedUsersString !== undefined) {
         excludedIDs = statsExcludedUsersString.split(",");
     }
+
+    // Check if the EPHEMERAL_ONLY_SERVERS environment variable is defined and save it
+    // in a variable
+    let ephemeralOnlyServersString = process.env.EPHEMERAL_ONLY_SERVERS;
+    let ephemeralOnlyServers: string[] = [];
+    if (ephemeralOnlyServersString !== undefined) {
+        ephemeralOnlyServers = ephemeralOnlyServersString.split(",");
+    }
+
     // Bot services is an object that is passed as an argument of
     // all command executors and contains all the services that the bot needs
     const botServices = new BotServices(
@@ -90,7 +99,10 @@ require("dotenv").config();
         if (!interaction.isCommand()) {
             return;
         }
-        await interaction.deferReply();
+
+        let isEphemeral =
+            ephemeralOnlyServers.indexOf(interaction.guildId || "") !== -1;
+        await interaction.deferReply({ ephemeral: isEphemeral });
         let command = interaction.commandName;
         let subcommand: string | null =
             interaction.options.getSubcommand(false);
