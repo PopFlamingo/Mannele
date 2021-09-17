@@ -107,14 +107,13 @@ export class CTSService {
     // normalized stop names
     private stopCodes: Map<string, [string, string[]]> = new Map();
 
-    async getFormattedScheduleForStation(
-        stationParameter: string
+    async getFormattedSchedule(
+        stationRedableName: string,
+        stopCodes: string[]
     ): Promise<string> {
-        let queryResult = await this.getVisitsForStation(stationParameter);
-        let name = queryResult[0];
-        let stops = queryResult[1];
-        let final = `__**Horaires pour la station *${name}***__`;
-        let emoji = emojiForStation(name);
+        let stops = await this.getVisitsForStopCodes(stopCodes);
+        let final = `__**Horaires pour la station *${stationRedableName}***__`;
+        let emoji = emojiForStation(stationRedableName);
         if (emoji !== null) {
             final += `  ${emoji}`;
         }

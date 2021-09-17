@@ -28,8 +28,17 @@ export default class CommandStationSchedule implements CommandDescriptor {
             throw new Error("No station was provided");
         }
 
+        let result = await services.cts.getStopCodes(stationParameter);
+
+        if (result === undefined) {
+            throw new Error(`Station ${stationParameter} not found`);
+        }
+
+        let readableName = result[0];
+        let stopCodes = result[1];
+
         await interaction.editReply(
-            await services.cts.getFormattedScheduleForStation(stationParameter)
+            await services.cts.getFormattedSchedule(readableName, stopCodes)
         );
     }
 
@@ -45,8 +54,7 @@ export default class CommandStationSchedule implements CommandDescriptor {
             anyError.message === "CTS_PARSING_ERROR" ||
             anyError.message === "CTS_TIME_ERROR"
         ) {
-            let message =
-                "Les horaires de la CTS sont momentanément indisponibles.";
+            let message = "Les horaires sont indisponibles pour le moment.";
             await interaction.editReply(message);
         } else {
             throw error;
