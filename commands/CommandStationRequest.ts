@@ -35,7 +35,6 @@ export default class CommandStationRequest implements CommandDescriptor {
         if (matches.length < 1) {
             throw new Error("STATION_NOT_FOUND");
         } else if (matches.length === 1) {
-            console.log("One station found");
             let stationRedableName = matches[0][0];
             let stopCodes = matches[0][1];
             await interaction.editReply(
@@ -45,8 +44,6 @@ export default class CommandStationRequest implements CommandDescriptor {
                 )
             );
         } else {
-            // Map matches to a { label: ..., value: ... } objects array
-            // Where label is match[0] and value is match[1] values joined with a comma
             let options = matches.map((match) => {
                 let name = match[0];
                 return { label: name, value: name };
@@ -67,65 +64,63 @@ export default class CommandStationRequest implements CommandDescriptor {
                 components: [row],
             });
 
-            if (reply instanceof Message) {
-                const collector = reply.createMessageComponentCollector({
-                    componentType: "SELECT_MENU",
-                    time: 6000,
-                });
-                collector.on("end", async (collected) => {
-                    // If nobody interacted
-                    const maybeMatch = collected.find(
-                        (c) => c.user.id === interaction.user.id
-                    );
-                    if (maybeMatch === undefined) {
-                        await interaction.deleteReply();
-                    }
-                });
-                collector.on("collect", async (componentInteraction) => {
-                    if (componentInteraction.user.id !== interaction.user.id) {
-                        let errorMessage = "Seule la personne à l'origine de ";
-                        errorMessage += "la commande peut utiliser ce menu. ";
-                        errorMessage += "Merci de m'envoyer une autre requête ";
-                        errorMessage +=
-                            " si vous souhaitez obtenir des informations.";
-                        await componentInteraction.reply({
-                            ephemeral: true,
-                            content: errorMessage,
-                        });
-                        return;
-                    } else {
-                        if (componentInteraction.isSelectMenu()) {
-                            let stationParameter =
-                                componentInteraction.values[0];
-
-                            let result = await services.cts.getStopCodes(
-                                stationParameter
-                            );
-
-                            if (result === undefined) {
-                                throw new Error(
-                                    `Station ${stationParameter} not found`
-                                );
-                            }
-
-                            let readableName = result[0];
-                            let stopCodes = result[1];
-                            await componentInteraction.update({
-                                content:
-                                    await services.cts.getFormattedSchedule(
-                                        readableName,
-                                        stopCodes
-                                    ),
-                                components: [],
-                            });
-                        } else {
-                            throw new Error("COMPONENT_NOT_SELECT_MENU");
-                        }
-                    }
-                });
-            } else {
-                throw Error("Unexpected APIMessage");
+            if (!(reply instanceof Message)) {
+                throw new Error("Reply is not a Message");
             }
+
+            const collector = reply.createMessageComponentCollector({
+                componentType: "SELECT_MENU",
+                time: 6000,
+            });
+            collector.on("end", async (collected) => {
+                // If nobody interacted
+                const maybeMatch = collected.find(
+                    (c) => c.user.id === interaction.user.id
+                );
+                if (maybeMatch === undefined) {
+                    await interaction.deleteReply();
+                }
+            });
+            collector.on("collect", async (componentInteraction) => {
+                if (componentInteraction.user.id !== interaction.user.id) {
+                    let errorMessage = "Seule la personne à l'origine de ";
+                    errorMessage += "la commande peut utiliser ce menu. ";
+                    errorMessage += "Merci de m'envoyer une autre requête ";
+                    errorMessage +=
+                        " si vous souhaitez obtenir des informations.";
+                    await componentInteraction.reply({
+                        ephemeral: true,
+                        content: errorMessage,
+                    });
+                    return;
+                } else {
+                    if (componentInteraction.isSelectMenu()) {
+                        let stationParameter = componentInteraction.values[0];
+
+                        let result = await services.cts.getStopCodes(
+                            stationParameter
+                        );
+
+                        if (result === undefined) {
+                            throw new Error(
+                                `Station ${stationParameter} not found`
+                            );
+                        }
+
+                        let readableName = result[0];
+                        let stopCodes = result[1];
+                        await componentInteraction.update({
+                            content: await services.cts.getFormattedSchedule(
+                                readableName,
+                                stopCodes
+                            ),
+                            components: [],
+                        });
+                    } else {
+                        throw new Error("COMPONENT_NOT_SELECT_MENU");
+                    }
+                }
+            });
         }
     }
 
