@@ -391,7 +391,7 @@ export class CTSService {
     async getStopCodes(
         stopName: string
     ): Promise<[string, string[]] | undefined> {
-        let maybeMatch = await this.getStopCodesMatches(stopName);
+        let maybeMatch = await this.searchStops(stopName);
         if (maybeMatch === undefined) {
             return undefined;
         } else {
@@ -399,12 +399,10 @@ export class CTSService {
         }
     }
 
-    // Get the stop codes associated with a stop name
-    async getStopCodesMatches(
-        stopName: string
-    ): Promise<[string, string[]][] | undefined> {
+    // Get the stop codes associated with a station name
+    async searchStops(stationName: string): Promise<[string, string[]][]> {
         // Normalize the stop name
-        stopName = CTSService.normalize(stopName);
+        stationName = CTSService.normalize(stationName);
         // Count the number of keys stopCodes has
         let stopCodesCount = this.stopCodes.size;
 
@@ -414,7 +412,7 @@ export class CTSService {
         // if it does, return the value associated with the key
         for (let key of this.stopCodes.keys()) {
             // Check if key string contains the stop name
-            if (key.includes(stopName)) {
+            if (key.includes(stationName)) {
                 matches.push(key);
             }
         }
@@ -426,7 +424,7 @@ export class CTSService {
 
         // If there is no match, return undefined
         if (matches.length === 0) {
-            return undefined;
+            return [];
         }
 
         // Return the value associated with the key

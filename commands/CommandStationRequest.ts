@@ -28,8 +28,7 @@ export default class CommandStationRequest implements CommandDescriptor {
             throw new Error("No station was provided");
         }
 
-        let matches =
-            (await services.cts.getStopCodesMatches(stationParameter)) || [];
+        let matches = (await services.cts.searchStops(stationParameter)) || [];
 
         console.log(matches);
         if (matches.length < 1) {
@@ -73,10 +72,12 @@ export default class CommandStationRequest implements CommandDescriptor {
                 time: 6000,
             });
             collector.on("end", async (collected) => {
-                // If nobody interacted
                 const maybeMatch = collected.find(
                     (c) => c.user.id === interaction.user.id
                 );
+                // If the user didn't select anything, we remove the message
+                // so that it doesn't stay present forever while not being usable
+                // anymore.
                 if (maybeMatch === undefined) {
                     await interaction.deleteReply();
                 }
@@ -87,7 +88,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                     errorMessage += "la commande peut utiliser ce menu. ";
                     errorMessage += "Merci de m'envoyer une autre requête ";
                     errorMessage +=
-                        " si vous souhaitez obtenir des informations.";
+                        "si vous souhaitez obtenir des informations.";
                     await componentInteraction.reply({
                         ephemeral: true,
                         content: errorMessage,
