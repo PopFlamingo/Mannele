@@ -117,11 +117,12 @@ require("dotenv").config();
             } catch (error) {
                 if (commandDescriptor.handleError !== undefined) {
                     try {
-                        await commandDescriptor.handleError(
-                            error,
-                            interaction,
-                            botServices
-                        );
+                        let customErrorMessage =
+                            await commandDescriptor.handleError(
+                                error,
+                                botServices
+                            );
+                        await interaction.editReply(customErrorMessage);
                     } catch (error) {
                         await defaultErrorHandler(error, interaction);
                     }

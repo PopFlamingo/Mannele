@@ -34,19 +34,18 @@ export default class CommandStationSchedule implements CommandDescriptor {
             throw new Error(`Station ${stationParameter} not found`);
         }
 
-        let readableName = result[0];
-        let stopCodes = result[1];
+        let userReadableName = result.userReadableName;
+        let stopCodes = result.stopCodes;
 
         await interaction.editReply(
-            await services.cts.getFormattedSchedule(readableName, stopCodes)
+            await services.cts.getFormattedSchedule(userReadableName, stopCodes)
         );
     }
 
     handleError? = async (
         error: unknown,
-        interaction: CommandInteraction,
         services: BotServices
-    ): Promise<void> => {
+    ): Promise<string> => {
         console.error(error);
         let anyError: any = error;
         if (
@@ -55,7 +54,7 @@ export default class CommandStationSchedule implements CommandDescriptor {
             anyError.message === "CTS_TIME_ERROR"
         ) {
             let message = "Les horaires sont indisponibles pour le moment.";
-            await interaction.editReply(message);
+            return message;
         } else {
             throw error;
         }

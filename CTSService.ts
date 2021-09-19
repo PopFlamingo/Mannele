@@ -39,6 +39,17 @@ export class LaneVisitsSchedule {
     }
 }
 
+export class StationQueryResult {
+    userReadableName: string;
+    stopCodes: string[];
+
+    // Constructor
+    constructor(userReadableName: string, stopCodes: string[]) {
+        this.userReadableName = userReadableName;
+        this.stopCodes = stopCodes;
+    }
+}
+
 export class CTSService {
     static async make(token: string): Promise<CTSService> {
         // Ensure responses are cached for 30 seconds
@@ -56,7 +67,7 @@ export class CTSService {
             timeout: 8000,
         });
 
-        let stopCodes = new Map<string, [string, string[]]>();
+        let stopCodes = new Map<string, StationQueryResult>();
 
         let stream = fs
             .createReadStream("./resources/stops.csv")
@@ -70,13 +81,13 @@ export class CTSService {
                 let value = stopCodes.get(normalizedName);
                 // If the array doesn't exist yet, create it
                 if (value === undefined) {
-                    value = [name, []];
+                    value = new StationQueryResult(name, []);
                     stopCodes.set(normalizedName, value);
                 }
 
                 // Add the stop code to the array if it doesn't exist yet
-                if (value[1].indexOf(stopCode) === -1) {
-                    value[1].push(stopCode);
+                if (value.stopCodes.indexOf(stopCode) === -1) {
+                    value.stopCodes.push(stopCode);
                 }
             });
 
@@ -95,7 +106,7 @@ export class CTSService {
 
     private constructor(
         api: AxiosInstance,
-        stopCodes: Map<string, [string, string[]]>
+        stopCodes: Map<string, StationQueryResult>
     ) {
         this.api = api;
         this.stopCodes = stopCodes;
@@ -105,15 +116,15 @@ export class CTSService {
 
     // A map of array of stop codes, where keys are
     // normalized stop names
-    private stopCodes: Map<string, [string, string[]]> = new Map();
+    private stopCodes: Map<string, StationQueryResult> = new Map();
 
     async getFormattedSchedule(
-        stationRedableName: string,
+        userReadableName: string,
         stopCodes: string[]
     ): Promise<string> {
         let stops = await this.getVisitsForStopCodes(stopCodes);
-        let final = `__**Horaires pour la station *${stationRedableName}***__`;
-        let emoji = emojiForStation(stationRedableName);
+        let final = `__**Horaires pour la station *${userReadableName}***__`;
+        let emoji = emojiForStation(userReadableName);
         if (emoji !== null) {
             final += `  ${emoji}`;
         }
@@ -154,8 +165,8 @@ export class CTSService {
             throw new Error("STATION_NOT_FOUND");
         }
 
-        let readableName = queryResult[0];
-        let codesList = queryResult[1];
+        let readableName = queryResult.userReadableName;
+        let codesList = queryResult.stopCodes;
 
         return [readableName, await this.getVisitsForStopCodes(codesList)];
     }
@@ -390,7 +401,7 @@ export class CTSService {
 
     async getStopCodes(
         stopName: string
-    ): Promise<[string, string[]] | undefined> {
+    ): Promise<StationQueryResult | undefined> {
         let maybeMatch = await this.searchStops(stopName);
         if (maybeMatch === undefined) {
             return undefined;
@@ -400,7 +411,7 @@ export class CTSService {
     }
 
     // Get the stop codes associated with a station name
-    async searchStops(stationName: string): Promise<[string, string[]][]> {
+    async searchStops(stationName: string): Promise<StationQueryResult[]> {
         // Normalize the stop name
         stationName = CTSService.normalize(stationName);
         // Count the number of keys stopCodes has

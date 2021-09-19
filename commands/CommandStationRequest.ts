@@ -5,8 +5,6 @@ import {
     MessageActionRow,
     MessageSelectMenu,
 } from "discord.js";
-import { CTSService, LaneVisitsSchedule } from "../CTSService";
-import { emojiForStation } from "../station_emojis";
 import { BotServices } from "../BotServices";
 
 export default class CommandStationRequest implements CommandDescriptor {
@@ -30,12 +28,11 @@ export default class CommandStationRequest implements CommandDescriptor {
 
         let matches = (await services.cts.searchStops(stationParameter)) || [];
 
-        console.log(matches);
         if (matches.length < 1) {
             throw new Error("STATION_NOT_FOUND");
         } else if (matches.length === 1) {
-            let stationRedableName = matches[0][0];
-            let stopCodes = matches[0][1];
+            let stationRedableName = matches[0].userReadableName;
+            let stopCodes = matches[0].stopCodes;
             await interaction.editReply(
                 await services.cts.getFormattedSchedule(
                     stationRedableName,
@@ -44,7 +41,7 @@ export default class CommandStationRequest implements CommandDescriptor {
             );
         } else {
             let options = matches.map((match) => {
-                let name = match[0];
+                let name = match.userReadableName;
                 return { label: name, value: name };
             });
 
@@ -69,8 +66,75 @@ export default class CommandStationRequest implements CommandDescriptor {
 
             const collector = reply.createMessageComponentCollector({
                 componentType: "SELECT_MENU",
-                time: 6000,
+                time: 600000,
             });
+
+            collector.on("collect", async (componentInteraction) => {
+                // Guard against interaction from other users
+                if (componentInteraction.user.id !== interaction.user.id) {
+                    let message = "Seule la personne à l'origine de ";
+                    message += "la commande peut utiliser ce menu. ";
+                    message += "Merci de m'envoyer une autre requête ";
+                    message += "si vous souhaitez obtenir des informations.";
+                    await componentInteraction.reply({
+                        ephemeral: true,
+                        content: message,
+                    });
+                    return;
+                }
+
+                try {
+                    await componentInteraction.deferUpdate();
+                    if (!componentInteraction.isSelectMenu()) {
+                        throw new Error("COMPONENT_NOT_SELECT_MENU");
+                    }
+
+                    let stationParameter = componentInteraction.values[0];
+                    // Find index of match in matches array
+                    let result = matches.find(
+                        (match) => match.userReadableName === stationParameter
+                    );
+                    // Throw an error if the station was not found
+                    if (result === undefined) {
+                        throw new Error("STATION_NOT_FOUND");
+                    }
+
+                    let readableName = result.userReadableName;
+                    let stopCodes = result.stopCodes;
+
+                    await componentInteraction.editReply({
+                        content: await services.cts.getFormattedSchedule(
+                            readableName,
+                            stopCodes
+                        ),
+                        components: [],
+                    });
+                } catch (error) {
+                    if (this.handleError !== undefined) {
+                        try {
+                            let errorMessage = await this.handleError(
+                                error,
+                                services
+                            );
+                            await componentInteraction.editReply({
+                                content: errorMessage,
+                                components: [],
+                            });
+                        } catch (error) {
+                            await componentInteraction.editReply({
+                                content: "Erreur inconnue",
+                                components: [],
+                            });
+                        }
+                    } else {
+                        await componentInteraction.editReply({
+                            content: "Erreur inconnue",
+                            components: [],
+                        });
+                    }
+                }
+            });
+
             collector.on("end", async (collected) => {
                 const maybeMatch = collected.find(
                     (c) => c.user.id === interaction.user.id
@@ -82,68 +146,25 @@ export default class CommandStationRequest implements CommandDescriptor {
                     await interaction.deleteReply();
                 }
             });
-            collector.on("collect", async (componentInteraction) => {
-                if (componentInteraction.user.id !== interaction.user.id) {
-                    let errorMessage = "Seule la personne à l'origine de ";
-                    errorMessage += "la commande peut utiliser ce menu. ";
-                    errorMessage += "Merci de m'envoyer une autre requête ";
-                    errorMessage +=
-                        "si vous souhaitez obtenir des informations.";
-                    await componentInteraction.reply({
-                        ephemeral: true,
-                        content: errorMessage,
-                    });
-                    return;
-                } else {
-                    if (componentInteraction.isSelectMenu()) {
-                        let stationParameter = componentInteraction.values[0];
-
-                        let result = await services.cts.getStopCodes(
-                            stationParameter
-                        );
-
-                        if (result === undefined) {
-                            throw new Error(
-                                `Station ${stationParameter} not found`
-                            );
-                        }
-
-                        let readableName = result[0];
-                        let stopCodes = result[1];
-                        await componentInteraction.update({
-                            content: await services.cts.getFormattedSchedule(
-                                readableName,
-                                stopCodes
-                            ),
-                            components: [],
-                        });
-                    } else {
-                        throw new Error("COMPONENT_NOT_SELECT_MENU");
-                    }
-                }
-            });
         }
     }
 
     handleError? = async (
         error: unknown,
-        interaction: CommandInteraction,
         services: BotServices
-    ): Promise<void> => {
+    ): Promise<string> => {
         let anyError = error as any;
         if (error instanceof Error && error.message === "STATION_NOT_FOUND") {
             let text = "La station demandée n'existe pas. ";
             text += "Vérifiez que vous n'avez pas fait d'erreur dans le nom ";
             text += "car je ne sais pas très bien les corriger pour le moment.";
-            await interaction.editReply(text);
-            return;
+            return text;
         } else if (
             anyError.isAxiosError ||
             anyError.message === "CTS_PARSING_ERROR" ||
             anyError.message === "CTS_TIME_ERROR"
         ) {
-            let message = "Les horaires sont indisponibles pour le moment.";
-            await interaction.editReply(message);
+            return "Les horaires sont indisponibles pour le moment.";
         } else {
             throw error;
         }
