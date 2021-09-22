@@ -99,6 +99,22 @@ export function emojiForStation(station: string): string | null {
             return "🇩🇪 🎓";
         case "Kehl Rathaus":
             return "🇩🇪 🏛️";
+        case "Baggersee":
+            return "🏊";
+        case "Abbé de l'Epée":
+            return "🗡";
+        case "Acacias":
+            return "🌳";
+        case "Soleil":
+            return "🌞";
+        case "Aeroparc":
+            return "✈️";
+        case "Alouettes":
+            return "🐦";
+        case "Conseil de l'Europe":
+        case "Droits de l'Homme":
+        case "Parlement Européen":
+            return "🇪🇺";
         default:
             return null;
     }

@@ -44,43 +44,43 @@ const commands = [
     new SlashCommandBuilder()
         .setName("horaires")
         .setDescription("Horaires en direct pour la CTS")
-        /*
         .addSubcommand(
             new SlashCommandSubcommandBuilder()
                 .setName("station")
                 .setDescription(
-                    "Affiche les horaires en direct pour une station (données CTS)"
+                    "Affiche les horaires pour n'importe quelle station (données CTS)"
                 )
                 .addStringOption(
                     new SlashCommandStringOption()
                         .setName("station")
-                        .setDescription("Station à afficher")
-                        .addChoices(makeStationTuplesArray())
+                        .setDescription("Station à rechercher et afficher")
                         .setRequired(true)
                 )
         )
-        */
         .addSubcommand(
             new SlashCommandSubcommandBuilder()
-                .setName("requête")
+                .setName("u")
                 .setDescription(
-                    "Affiche les horaires en direct pour une station personnalisée (données CTS)"
+                    "Affiche les horaires pour une station aux alentours de l'Unistra (données CTS)"
                 )
                 .addStringOption(
                     new SlashCommandStringOption()
-                        .setName("requête")
-                        .setDescription("Nom de la station personnalisée")
+                        .setName("station")
+                        .setDescription("Nom de la station")
+                        .addChoices(makeStationTuplesArray())
                         .setRequired(true)
                 )
         ),
-    /*
+
     new SlashCommandBuilder()
         .setName("sources")
-        .setDescription("Affiche les sources des données du robot"),
-        */
+        .setDescription(
+            "Affiche les sources des données du robot et les avertissements de fiabilité"
+        ),
 ].map((command) => command.toJSON());
 
 const rest = new REST({ version: "9" }).setToken(discordToken);
+
 /*
 (async () => {
     try {
@@ -94,6 +94,7 @@ const rest = new REST({ version: "9" }).setToken(discordToken);
     }
 })();
 */
+
 (async () => {
     try {
         await rest.put(Routes.applicationGuildCommands(clientId, guildId), {

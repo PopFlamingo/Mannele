@@ -6,7 +6,7 @@ import { BotServices } from "../BotServices";
 
 export default class CommandStationSchedule implements CommandDescriptor {
     commandName: string = "horaires";
-    subCommandName: string = "station";
+    subCommandName: string = "u";
 
     async execute(
         interaction: CommandInteraction,
@@ -15,12 +15,9 @@ export default class CommandStationSchedule implements CommandDescriptor {
         let stationParameter = interaction.options.getString("station");
 
         // Save some stats
+        services.stats.increment("COMMAND(horaires,u)", interaction.user.id);
         services.stats.increment(
-            "COMMAND(horaires,station)",
-            interaction.user.id
-        );
-        services.stats.increment(
-            `COMMAND(horaires,station) ${stationParameter}`,
+            `COMMAND(horaires,u) ${stationParameter}`,
             interaction.user.id
         );
 
@@ -53,8 +50,13 @@ export default class CommandStationSchedule implements CommandDescriptor {
             anyError.message === "CTS_PARSING_ERROR" ||
             anyError.message === "CTS_TIME_ERROR"
         ) {
-            let message = "Les horaires sont indisponibles pour le moment.";
-            return message;
+            let text = "Les horaires sont indisponibles, cela signifie ";
+            text += "peut être qu'il n'y a pas de passages de bus ou trams";
+            text += " pour le moment.";
+            text +=
+                "\n\n*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0))*";
+
+            return text;
         } else {
             throw error;
         }

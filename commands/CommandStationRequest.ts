@@ -9,16 +9,16 @@ import { BotServices } from "../BotServices";
 
 export default class CommandStationRequest implements CommandDescriptor {
     commandName: string = "horaires";
-    subCommandName: string = "requête";
+    subCommandName: string = "station";
 
     async execute(
         interaction: CommandInteraction,
         services: BotServices
     ): Promise<void> {
-        let stationParameter = interaction.options.getString("requête");
+        let stationParameter = interaction.options.getString("station");
         // Save some stats
         services.stats.increment(
-            "COMMAND(horaires,requête)",
+            "COMMAND(horaires,station)",
             interaction.user.id
         );
 
@@ -30,7 +30,7 @@ export default class CommandStationRequest implements CommandDescriptor {
 
         if (matches.length < 1) {
             throw new Error("STATION_NOT_FOUND");
-        } else if (matches.length === 1) {
+        } else if (matches.length === 1 && matches[0].isExactMatch) {
             let stationRedableName = matches[0].userReadableName;
             let stopCodes = matches[0].stopCodes;
             await interaction.editReply(
@@ -48,12 +48,20 @@ export default class CommandStationRequest implements CommandDescriptor {
             const row = new MessageActionRow().addComponents(
                 new MessageSelectMenu()
                     .setCustomId("station_choice")
-                    .setPlaceholder("Choisissez une station")
+                    .setPlaceholder("Choix de la station")
                     .addOptions(options)
             );
 
-            let message = "Plusieurs stations correspondent à votre requête,";
-            message += " merci d'en choisir une dans le menu ci-dessous.";
+            let message = "";
+            if (options.length > 1) {
+                message =
+                    "Plusieurs stations peuvent correspondre à votre requête,";
+                message += " merci d'en choisir une dans le menu ci-dessous.";
+            } else {
+                message = "J'ai trouvé une station qui pourrait correspondre ";
+                message += "à votre requête mais je n'en suis pas tout à fait ";
+                message += "sûr...";
+            }
 
             let reply = await interaction.editReply({
                 content: message,
@@ -155,16 +163,28 @@ export default class CommandStationRequest implements CommandDescriptor {
     ): Promise<string> => {
         let anyError = error as any;
         if (error instanceof Error && error.message === "STATION_NOT_FOUND") {
-            let text = "La station demandée n'existe pas. ";
-            text += "Vérifiez que vous n'avez pas fait d'erreur dans le nom ";
-            text += "car je ne sais pas très bien les corriger pour le moment.";
+            let text = "La station demandée ne semble pas exister. ";
+            text += "Vérifiez que vous n'ayez pas fait d'erreur dans le nom.";
+            text +=
+                "\nMa base de données des noms et références de stations a été ";
+            text += "mise à jour la dernière fois le ";
+            text += process.env.LAST_STATIONS_UPDATE_DATE || "[inconnu]";
+            text +=
+                ".\n\n*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0))*";
+
             return text;
         } else if (
             anyError.isAxiosError ||
             anyError.message === "CTS_PARSING_ERROR" ||
             anyError.message === "CTS_TIME_ERROR"
         ) {
-            return "Les horaires sont indisponibles pour le moment.";
+            let text = "Les horaires sont indisponibles, cela signifie ";
+            text += "*peut être* qu'il n'y a pas de passages de bus ou trams ";
+            text += "pour le moment.";
+            text +=
+                "\n\n*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0))*";
+
+            return text;
         } else {
             throw error;
         }

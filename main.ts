@@ -88,6 +88,7 @@ require("dotenv").config();
         error: unknown,
         interaction: CommandInteraction
     ) {
+        console.error(error);
         let errorMessage = "Une erreur est survenue ! :slight_frown:\n";
         errorMessage +=
             "Cela peut être une erreur interne ou provenir d'un service que j'ai tenté de contacter.\n";

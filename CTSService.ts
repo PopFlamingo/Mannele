@@ -6,6 +6,7 @@ import { SpecializedStopMonitoringResponse, VehicleMode } from "./SIRITypes";
 import csv from "csv-parser";
 import fs from "fs";
 import { emojiForStation } from "./station_emojis";
+import Fuse from "fuse.js";
 
 // Create and export an enum that stores either tram or bus
 export enum TransportType {
@@ -42,11 +43,17 @@ export class LaneVisitsSchedule {
 export class StationQueryResult {
     userReadableName: string;
     stopCodes: string[];
+    isExactMatch: boolean;
 
     // Constructor
-    constructor(userReadableName: string, stopCodes: string[]) {
+    constructor(
+        userReadableName: string,
+        stopCodes: string[],
+        isExactMatch: boolean = false
+    ) {
         this.userReadableName = userReadableName;
         this.stopCodes = stopCodes;
+        this.isExactMatch = isExactMatch;
     }
 }
 
@@ -83,6 +90,16 @@ export class CTSService {
                 if (value === undefined) {
                     value = new StationQueryResult(name, []);
                     stopCodes.set(normalizedName, value);
+                } else if (
+                    (stopCodes.get(normalizedName)?.userReadableName || "") !==
+                    name && process.env.LOG_CONFLICTS === "YES"
+                ) {
+                    console.log(normalizedName);
+                    console.log(
+                        stopCodes.get(normalizedName)?.userReadableName
+                    );
+                    console.log(name);
+                    console.log("=========");
                 }
 
                 // Add the stop code to the array if it doesn't exist yet
@@ -151,6 +168,9 @@ export class CTSService {
             final += "\n\n**Bus  :bus: :**\n";
             final += CTSService.formatStops(buses);
         }
+
+        final +=
+            "\n\n*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0))*";
 
         return final;
     }
@@ -297,13 +317,7 @@ export class CTSService {
         // Sort vehicleStops by directionRef. This allows us to display the stops
         // in the correct order both for a given line and accross lines
         vehicleStops.sort((a, b) => {
-            if (a.directionRef < b.directionRef) {
-                return -1;
-            } else if (a.directionRef > b.directionRef) {
-                return 1;
-            } else {
-                return 0;
-            }
+            return b.directionRef - a.directionRef;
         });
 
         // Sort vehicleStops by line name (this is a stable sort in NodeJS so we still)
@@ -414,32 +428,71 @@ export class CTSService {
     async searchStops(stationName: string): Promise<StationQueryResult[]> {
         // Normalize the stop name
         stationName = CTSService.normalize(stationName);
-        // Count the number of keys stopCodes has
-        let stopCodesCount = this.stopCodes.size;
 
-        let matches: string[] = [];
-
-        // For each key in the stopCodes map, check if it contains the stop name
-        // if it does, return the value associated with the key
+        let exactlyContained: string[] = [];
+        // If we find a string that contains the station name, we add it to the array
         for (let key of this.stopCodes.keys()) {
             // Check if key string contains the stop name
-            if (key.includes(stationName)) {
-                matches.push(key);
+            if (key.indexOf(stationName) !== -1) {
+                exactlyContained.push(key);
             }
         }
 
-        // Sort matches by length, shortest first
-        matches.sort((a, b) => {
+        // If the array only has one element and it is an exact match, return it
+        if (
+            exactlyContained.length === 1 &&
+            exactlyContained[0] === stationName
+        ) {
+            let result = this.stopCodes.get(exactlyContained[0]);
+            if (result === undefined) {
+                throw new Error("SHOULD_NEVER_HAPPEN");
+            }
+            result.isExactMatch = true;
+            return [result];
+        } else {
+            // Otherwise, we only keep the first 25 elements
+            exactlyContained = exactlyContained.slice(0, 25);
+        }
+
+        // Sort exactlyContained by string size from smallest to longest
+        exactlyContained.sort((a, b) => {
             return a.length - b.length;
         });
 
-        // If there is no match, return undefined
-        if (matches.length === 0) {
-            return [];
+        // If we don't, make a fuzzy search instead
+        let stationsCanonicalNames = Array.from(this.stopCodes.keys());
+        const fuse = new Fuse(stationsCanonicalNames, { includeScore: true });
+        let fuzzyResults = fuse.search(stationName);
+
+        // Do not include results with a too bad score
+        fuzzyResults = fuzzyResults.filter(
+            (result) => (result.score || 1) < 0.5
+        );
+
+        // Only return the first 25 results
+        fuzzyResults = fuzzyResults.slice(0, 25);
+
+        // Map result.item to matches array
+        let fuzzyMatches = fuzzyResults.map((result) => {
+            return result.item;
+        });
+
+        // Copy exactlyContained to result array
+        let results = exactlyContained.slice();
+
+        // For each fuzzy match
+        for (let fuzzyMatch of fuzzyMatches) {
+            // If it is not already in the result array, add it
+            if (results.indexOf(fuzzyMatch) === -1) {
+                results.push(fuzzyMatch);
+            }
         }
 
+        // Limit result array to 25 elements
+        results = results.slice(0, 25);
+
         // Return the value associated with the key
-        return matches.map((match) => {
+        return results.map((match) => {
             let value = this.stopCodes.get(match);
             if (value === undefined) {
                 throw Error("Unexpected undefined value");
