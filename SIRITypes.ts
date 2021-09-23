@@ -806,14 +806,54 @@ export class AnnotatedStopPointStructureExtension {
 }
 
 @jsonObject
+export class SIRILocation {
+    constructor(latitude: number, longitude: number) {
+        this.latitude = latitude;
+        this.longitude = longitude;
+    }
+
+    @jsonMember({ name: "Latitude", isRequired: true })
+    public latitude: number;
+
+    @jsonMember({ name: "Longitude", isRequired: true })
+    public longitude: number;
+
+    static distance(location1: SIRILocation, location2: SIRILocation): number {
+        const lat1 = location1.latitude;
+        const lon1 = location1.longitude;
+        const lat2 = location2.latitude;
+        const lon2 = location2.longitude;
+
+        const R = 6371e3; // metres
+        const φ1 = lat1 * (Math.PI / 180);
+        const φ2 = lat2 * (Math.PI / 180);
+        const Δφ = (lat2 - lat1) * (Math.PI / 180);
+        const Δλ = (lon2 - lon1) * (Math.PI / 180);
+
+        const a =
+            Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
+    }
+
+    distanceTo(location: SIRILocation): number {
+        return SIRILocation.distance(this, location);
+    }
+}
+
+@jsonObject
 export class AnnotatedStopPointStructure {
     constructor(
         stopName: string,
         extension: AnnotatedStopPointStructureExtension,
+        location: SIRILocation,
         stopPointRef?: string
     ) {
         this.stopPointRef = stopPointRef;
         this.stopName = stopName;
+        this.location = location;
         this.extension = extension;
     }
 
@@ -822,6 +862,9 @@ export class AnnotatedStopPointStructure {
 
     @jsonMember({ name: "StopName", isRequired: true })
     public stopName: string;
+
+    @jsonMember({ name: "Location" })
+    public location: SIRILocation;
 
     @jsonMember({ name: "Extension", isRequired: true })
     public extension: AnnotatedStopPointStructureExtension;

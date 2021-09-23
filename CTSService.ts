@@ -7,7 +7,7 @@ import { TypedJSON } from "typedjson";
 import {
     ResponseStopPointsDiscoveryList,
     SpecializedStopMonitoringResponse,
-    StopMonitoringDelivery,
+    SIRILocation,
     VehicleMode,
 } from "./SIRITypes";
 import { emojiForStation } from "./station_emojis";
@@ -48,16 +48,19 @@ export class StationQueryResult {
     userReadableName: string;
     stopCode: string;
     isExactMatch: boolean;
+    location: SIRILocation | undefined;
 
     // Constructor
     constructor(
         userReadableName: string,
         stopCode: string,
-        isExactMatch: boolean = false
+        isExactMatch: boolean = false,
+        location: SIRILocation | undefined
     ) {
         this.userReadableName = userReadableName;
         this.stopCode = stopCode;
         this.isExactMatch = isExactMatch;
+        this.location = location;
     }
 }
 
@@ -105,13 +108,27 @@ export class CTSService {
             let value = stopCodes.get(normalizedName);
             // If the array doesn't exist yet, create it
             if (value === undefined) {
-                value = new StationQueryResult(name, logicalStopCode);
+                value = new StationQueryResult(
+                    name,
+                    logicalStopCode,
+                    false,
+                    stop.location
+                );
                 stopCodes.set(normalizedName, value);
             } else {
                 if (logicalStopCode != value.stopCode) {
-                    console.log(
-                        `Warning: stop code for ${name} is ${logicalStopCode} but ${value.stopCode} was already found`
-                    );
+                    let error = `Warning: stop code for ${name} is ${logicalStopCode} but ${value.stopCode}`;
+                    error += ` was already found.`;
+
+                    let loc1 = stop.location;
+                    let loc2 = value.location;
+
+                    if (loc1 !== undefined && loc2 !== undefined) {
+                        let distance = Math.round(loc1.distanceTo(loc2));
+                        error += ` (distance between stops is ${distance} m)`;
+                    }
+
+                    console.log(error);
                 }
             }
         }
