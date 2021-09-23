@@ -1,12 +1,11 @@
-import { linesStations, stationCodes } from "./data";
 import axios, { AxiosInstance } from "axios";
 import { setupCache } from "axios-cache-adapter";
-import { TypedJSON } from "typedjson";
-import { SpecializedStopMonitoringResponse, VehicleMode } from "./SIRITypes";
 import csv from "csv-parser";
 import fs from "fs";
-import { emojiForStation } from "./station_emojis";
 import Fuse from "fuse.js";
+import { TypedJSON } from "typedjson";
+import { SpecializedStopMonitoringResponse, VehicleMode } from "./SIRITypes";
+import { emojiForStation } from "./station_emojis";
 
 // Create and export an enum that stores either tram or bus
 export enum TransportType {
@@ -76,6 +75,8 @@ export class CTSService {
 
         let stopCodes = new Map<string, StationQueryResult>();
 
+        // CReate a set to store all stop codes strings
+        let stopCodesStationNames = new Map<string, string>();
         let stream = fs
             .createReadStream("./resources/stops.csv")
             .pipe(csv())
@@ -85,6 +86,23 @@ export class CTSService {
                 let normalizedName = CTSService.normalize(name);
                 let stopCode = data.stop_code;
 
+                // Check if stopCode doesn't already exist
+                if (!stopCodesStationNames.has(stopCode)) {
+                    // Add stopCode to the set
+                    stopCodesStationNames.set(stopCode, name);
+                } else {
+                    let errorString = `Duplicated stop code: [${stopCode}]`;
+                    if (name === stopCodesStationNames.get(stopCode)) {
+                        errorString += ` (in "${name}" station")`;
+                    } else {
+                        errorString += ` (⚠️ present in both "${name}"" and "${stopCodesStationNames.get(
+                            stopCode
+                        )})" stations`;
+                    }
+
+                    console.error(errorString);
+                }
+
                 let value = stopCodes.get(normalizedName);
                 // If the array doesn't exist yet, create it
                 if (value === undefined) {
@@ -92,7 +110,8 @@ export class CTSService {
                     stopCodes.set(normalizedName, value);
                 } else if (
                     (stopCodes.get(normalizedName)?.userReadableName || "") !==
-                    name && process.env.LOG_CONFLICTS === "YES"
+                        name &&
+                    process.env.LOG_CONFLICTS === "YES"
                 ) {
                     console.log(normalizedName);
                     console.log(
