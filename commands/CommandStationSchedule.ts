@@ -32,11 +32,13 @@ export default class CommandStationSchedule implements CommandDescriptor {
         }
 
         let userReadableName = result.userReadableName;
-        let stopCodes =
+        let stopCode =
             result.extendedStations[0].logicStations[0].logicStopCode;
 
         await interaction.editReply(
-            await services.cts.getFormattedSchedule(userReadableName, stopCodes)
+            await services.cts.getFormattedSchedule(userReadableName, [
+                stopCode,
+            ])
         );
     }
 

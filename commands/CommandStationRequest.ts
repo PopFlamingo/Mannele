@@ -6,18 +6,12 @@ import {
     MessageSelectMenu,
 } from "discord.js";
 import { BotServices } from "../BotServices";
+import { LogicStation } from "../CTSService";
 
 export default class CommandStationRequest implements CommandDescriptor {
     commandName: string = "horaires";
     subCommandName: string = "station";
 
-    async execute(
-        interaction: CommandInteraction,
-        services: BotServices
-    ): Promise<void> {
-        return;
-    }
-    /*
     async execute(
         interaction: CommandInteraction,
         services: BotServices
@@ -35,21 +29,54 @@ export default class CommandStationRequest implements CommandDescriptor {
 
         let matches = (await services.cts.searchStops(stationParameter)) || [];
 
-        if (matches.length < 1) {
+        // We will now flatten the array of matches, what this means is that
+        // we are going to take all extended stations and put them in a single array
+        // Same but an object
+        type FlattenedMatch = {
+            logicStations: LogicStation[];
+            stationName: string;
+            geoDescription: string | undefined;
+            isExactMatch: boolean;
+        };
+
+        let flattenedMatches: FlattenedMatch[] = [];
+
+        for (let match of matches) {
+            for (let extendedStation of match.extendedStations) {
+                // Coorect code
+                flattenedMatches.push({
+                    logicStations: extendedStation.logicStations,
+                    stationName: match.userReadableName,
+                    geoDescription:
+                        extendedStation.distinctiveLocationDescription,
+                    isExactMatch: match.isExactMatch,
+                });
+            }
+        }
+
+        if (flattenedMatches.length < 1) {
             throw new Error("STATION_NOT_FOUND");
-        } else if (matches.length === 1 && matches[0].isExactMatch) {
-            let stationRedableName = matches[0].userReadableName;
-            let stopCode = matches[0].stopCode;
+        } else if (
+            flattenedMatches.length === 1 &&
+            flattenedMatches[0].isExactMatch
+        ) {
+            let stationRedableName = flattenedMatches[0].stationName;
+            let stopCodes = flattenedMatches[0].logicStations.map((station) => {
+                return station.logicStopCode;
+            });
             await interaction.editReply(
                 await services.cts.getFormattedSchedule(
                     stationRedableName,
-                    stopCode
+                    stopCodes
                 )
             );
         } else {
-            let options = matches.map((match) => {
-                let name = match.userReadableName;
-                return { label: name, value: name };
+            let options = flattenedMatches.map((match, index) => {
+                let name = match.stationName;
+                if (match.geoDescription !== undefined) {
+                    name += ` (${match.geoDescription})`;
+                }
+                return { label: name, value: `${index}` };
             });
 
             const row = new MessageActionRow().addComponents(
@@ -104,23 +131,29 @@ export default class CommandStationRequest implements CommandDescriptor {
                         throw new Error("COMPONENT_NOT_SELECT_MENU");
                     }
 
-                    let stationParameter = componentInteraction.values[0];
-                    // Find index of match in matches array
-                    let result = matches.find(
-                        (match) => match.userReadableName === stationParameter
+                    let stationParameterIdx = parseInt(
+                        componentInteraction.values[0]
                     );
+                    let station = flattenedMatches[stationParameterIdx];
+
                     // Throw an error if the station was not found
-                    if (result === undefined) {
+                    if (station === undefined) {
                         throw new Error("STATION_NOT_FOUND");
                     }
 
-                    let readableName = result.userReadableName;
-                    let stopCode = result.stopCode;
+                    let readableName = station.stationName;
+                    if (station.geoDescription !== undefined) {
+                        readableName += ` (${station.geoDescription})`;
+                    }
+
+                    let stopCodes = station.logicStations.map((station) => {
+                        return station.logicStopCode;
+                    });
 
                     await componentInteraction.editReply({
                         content: await services.cts.getFormattedSchedule(
                             readableName,
-                            stopCode
+                            stopCodes
                         ),
                         components: [],
                     });
@@ -163,7 +196,6 @@ export default class CommandStationRequest implements CommandDescriptor {
             });
         }
     }
-    */
 
     handleError? = async (
         error: unknown,

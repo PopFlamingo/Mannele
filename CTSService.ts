@@ -273,9 +273,9 @@ export class CTSService {
 
     async getFormattedSchedule(
         userReadableName: string,
-        stopCode: string
+        stopCodes: string[]
     ): Promise<string> {
-        let stops = await this.getVisitsForStopCode(stopCode);
+        let stops = await this.getVisitsForStopCodes(stopCodes);
         let final = `__**Horaires pour la station *${userReadableName}***__`;
         let emoji = emojiForStation(userReadableName);
         if (emoji !== null) {
@@ -311,8 +311,8 @@ export class CTSService {
         return final;
     }
 
-    async getVisitsForStopCode(
-        stopCode: string
+    async getVisitsForStopCodes(
+        stopCodes: string[]
     ): Promise<LaneVisitsSchedule[]> {
         // Note the difference between a stop and a station:
         // A stop is a place where a tram or a bus passes in a specific
@@ -326,8 +326,13 @@ export class CTSService {
         // We query the CTS API for all the stop codes for the station
         // so we actually need to repeat the MonitoringRef query parameter
         // for each stop code.
+        let params = new URLSearchParams();
+        for (let code of stopCodes) {
+            params.append("MonitoringRef", code);
+        }
+
         let rawResponse = await this.api.get("/stop-monitoring", {
-            params: { MonitoringRef: stopCode },
+            params: params,
         });
 
         // We use a strongly typed JSON parser to parse the response
