@@ -4,6 +4,7 @@ import csv from "csv-parser";
 import fs from "fs";
 import Fuse from "fuse.js";
 import { TypedJSON } from "typedjson";
+import { FeatureCollection, GeoJSON } from "geojson";
 import {
     ResponseStopPointsDiscoveryList,
     SpecializedStopMonitoringResponse,
@@ -44,23 +45,89 @@ export class LaneVisitsSchedule {
     }
 }
 
+export class LogicStation {
+    constructor(logicStopCode: string, location: SIRILocation) {
+        this.logicStopCode = logicStopCode;
+        this.location = location;
+    }
+
+    logicStopCode: string;
+    location: SIRILocation;
+}
+
+export class ProbableExtendedStation {
+    constructor(logicStations: LogicStation[]) {
+        this.logicStations = logicStations;
+    }
+
+    // All stations that are part of the probable extended station
+    logicStations: LogicStation[];
+
+    // A string that enables differentiating between different probable extended stations
+    distinctiveLocationDescription: string | undefined;
+
+    // Returns the average location of the probable extended station
+    getAverageLocation(): SIRILocation {
+        let averageLat = 0;
+        let averageLon = 0;
+        for (const logicStation of this.logicStations) {
+            averageLat += logicStation.location.latitude;
+            averageLon += logicStation.location.longitude;
+        }
+        averageLat /= this.logicStations.length;
+        averageLon /= this.logicStations.length;
+        return new SIRILocation(averageLat, averageLon);
+    }
+}
+
 export class StationQueryResult {
     userReadableName: string;
-    stopCode: string;
     isExactMatch: boolean;
-    location: SIRILocation | undefined;
+    extendedStations: ProbableExtendedStation[];
 
     // Constructor
-    constructor(
-        userReadableName: string,
-        stopCode: string,
-        isExactMatch: boolean = false,
-        location: SIRILocation | undefined
-    ) {
+    constructor(userReadableName: string, isExactMatch: boolean = false) {
         this.userReadableName = userReadableName;
-        this.stopCode = stopCode;
         this.isExactMatch = isExactMatch;
-        this.location = location;
+        this.extendedStations = [];
+    }
+
+    addLogicStation(logicStation: LogicStation) {
+        // Find the closest probable extended station
+        let closestProbableExtendedStation:
+            | ProbableExtendedStation
+            | undefined = undefined;
+        let closestProbableExtendedStationDistance = Number.MAX_SAFE_INTEGER;
+        for (const probableExtendedStation of this.extendedStations) {
+            let distance = probableExtendedStation
+                .getAverageLocation()
+                .distanceTo(logicStation.location);
+            if (distance < closestProbableExtendedStationDistance) {
+                closestProbableExtendedStation = probableExtendedStation;
+                closestProbableExtendedStationDistance = distance;
+            }
+        }
+        // If there is no closest probable extended station, create one
+        if (closestProbableExtendedStation === undefined) {
+            closestProbableExtendedStation = new ProbableExtendedStation([
+                logicStation,
+            ]);
+            this.extendedStations.push(closestProbableExtendedStation);
+        } else if (
+            closestProbableExtendedStation.logicStations.find(
+                (otherStation) =>
+                    otherStation.logicStopCode === logicStation.logicStopCode
+            ) !== undefined
+        ) {
+            // If the closest probable extended station already contains the logic station, do nothing
+            return;
+        } else if (closestProbableExtendedStationDistance > 150) {
+            // If the closest probable extended station is further away than 150 meters, create a new one
+            closestProbableExtendedStation = new ProbableExtendedStation([
+                logicStation,
+            ]);
+            this.extendedStations.push(closestProbableExtendedStation);
+        }
     }
 }
 
@@ -71,7 +138,7 @@ export class CTSService {
         const cache = setupCache({ maxAge: 30 * 1000 });
 
         // Create an axios instance to access the CTS API
-        let api = axios.create({
+        let ctsAPI = axios.create({
             adapter: cache.adapter,
             baseURL: "https://api.cts-strasbourg.eu/v1/siri/2.0/",
             auth: {
@@ -81,9 +148,14 @@ export class CTSService {
             timeout: 8000,
         });
 
-        let stopCodes = new Map<string, StationQueryResult>();
+        let geoGouvAPI = axios.create({
+            baseURL: "https://api-adresse.data.gouv.fr",
+            timeout: 8000,
+        });
 
-        let rawResponse = await api.get("stoppoints-discovery");
+        let queryResults = new Map<string, StationQueryResult>();
+
+        let rawResponse = await ctsAPI.get("stoppoints-discovery");
 
         const serializer = new TypedJSON(ResponseStopPointsDiscoveryList, {
             errorHandler: (error: Error) => {
@@ -105,35 +177,90 @@ export class CTSService {
             let normalizedName = CTSService.normalize(name);
             let logicalStopCode = stop.extension.logicalStopCode;
 
-            let value = stopCodes.get(normalizedName);
-            // If the array doesn't exist yet, create it
+            let value = queryResults.get(normalizedName);
+            // If the query result doesn't exist yet, create it
             if (value === undefined) {
-                value = new StationQueryResult(
-                    name,
-                    logicalStopCode,
-                    false,
-                    stop.location
+                value = new StationQueryResult(name, false);
+                value.addLogicStation(
+                    new LogicStation(logicalStopCode, stop.location)
                 );
-                stopCodes.set(normalizedName, value);
+                queryResults.set(normalizedName, value);
             } else {
-                if (logicalStopCode != value.stopCode) {
-                    let error = `Warning: stop code for ${name} is ${logicalStopCode} but ${value.stopCode}`;
-                    error += ` was already found.`;
+                value.addLogicStation(
+                    new LogicStation(logicalStopCode, stop.location)
+                );
+            }
+        }
 
-                    let loc1 = stop.location;
-                    let loc2 = value.location;
+        // Loop through all query results with their keys and values
+        for (const [key, value] of queryResults) {
+            // If the query results contains more than one probable extended station
+            // in other terms if multiple stations that are far away from each other
+            // share the same name
+            if (value.extendedStations.length > 1) {
+                // We query geo.gouv.fr to get inverse geocoding data
+                // which includes street name, postal code and city.
+                let geoFeatures: [string, string, string][] = [];
+                for (let extendedStation of value.extendedStations) {
+                    let featureCollection: FeatureCollection = (
+                        await geoGouvAPI.get("reverse", {
+                            params: {
+                                lat: extendedStation.getAverageLocation()
+                                    .latitude,
+                                lon: extendedStation.getAverageLocation()
+                                    .longitude,
+                            },
+                        })
+                    ).data;
 
-                    if (loc1 !== undefined && loc2 !== undefined) {
-                        let distance = Math.round(loc1.distanceTo(loc2));
-                        error += ` (distance between stops is ${distance} m)`;
+                    let firstPoint = featureCollection.features[0].properties;
+
+                    if (firstPoint !== null) {
+                        geoFeatures.push([
+                            firstPoint.name,
+                            firstPoint.postcode,
+                            firstPoint.city,
+                        ]);
                     }
+                }
 
-                    console.log(error);
+                // Detect if postcode + city alone is enough to uniquely identify the station
+                // and set mustUseStreet to true otherwise
+                var cityNamePostCodes: Set<string> = new Set();
+                var mustUseStreet = false;
+                for (let geoFeature of geoFeatures) {
+                    let combined = `${geoFeature[1]} ${geoFeature[2]}`;
+                    if (cityNamePostCodes.has(combined)) {
+                        mustUseStreet = true;
+                        break;
+                    } else {
+                        cityNamePostCodes.add(combined);
+                    }
+                }
+
+                // Use the geocoding results to create the distinctiveLocationDescription
+                for (let i = 0; i < value.extendedStations.length; i++) {
+                    let extendedStation = value.extendedStations[i];
+                    let geoFeature = geoFeatures[i];
+
+                    if (mustUseStreet) {
+                        extendedStation.distinctiveLocationDescription =
+                            geoFeature[0] + " ";
+                        extendedStation.distinctiveLocationDescription +=
+                            geoFeature[1] + " ";
+                        extendedStation.distinctiveLocationDescription +=
+                            geoFeature[2];
+                    } else {
+                        extendedStation.distinctiveLocationDescription =
+                            geoFeature[1] + " ";
+                        extendedStation.distinctiveLocationDescription +=
+                            geoFeature[2];
+                    }
                 }
             }
         }
 
-        return new CTSService(api, stopCodes);
+        return new CTSService(ctsAPI, queryResults);
     }
 
     private constructor(
@@ -145,7 +272,6 @@ export class CTSService {
     }
 
     private api: AxiosInstance;
-
     // A map of array of stop codes, where keys are
     // normalized stop names
     private stopCodes: Map<string, StationQueryResult> = new Map();
@@ -188,22 +314,6 @@ export class CTSService {
             "\n\n*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0))*";
 
         return final;
-    }
-
-    async getVisitsForStation(
-        stationName: string
-    ): Promise<[string, LaneVisitsSchedule[]]> {
-        // Array that will store all stop codes for the station
-        let queryResult = await this.getStopCodes(stationName);
-
-        if (queryResult === undefined) {
-            throw new Error("STATION_NOT_FOUND");
-        }
-
-        return [
-            queryResult.userReadableName,
-            await this.getVisitsForStopCode(queryResult.stopCode),
-        ];
     }
 
     async getVisitsForStopCode(

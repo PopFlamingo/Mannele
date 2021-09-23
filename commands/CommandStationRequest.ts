@@ -15,6 +15,13 @@ export default class CommandStationRequest implements CommandDescriptor {
         interaction: CommandInteraction,
         services: BotServices
     ): Promise<void> {
+        return;
+    }
+    /*
+    async execute(
+        interaction: CommandInteraction,
+        services: BotServices
+    ): Promise<void> {
         let stationParameter = interaction.options.getString("station");
         // Save some stats
         services.stats.increment(
@@ -156,6 +163,7 @@ export default class CommandStationRequest implements CommandDescriptor {
             });
         }
     }
+    */
 
     handleError? = async (
         error: unknown,
