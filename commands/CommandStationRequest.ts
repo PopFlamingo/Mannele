@@ -32,11 +32,11 @@ export default class CommandStationRequest implements CommandDescriptor {
             throw new Error("STATION_NOT_FOUND");
         } else if (matches.length === 1 && matches[0].isExactMatch) {
             let stationRedableName = matches[0].userReadableName;
-            let stopCodes = matches[0].stopCodes;
+            let stopCode = matches[0].stopCode;
             await interaction.editReply(
                 await services.cts.getFormattedSchedule(
                     stationRedableName,
-                    stopCodes
+                    stopCode
                 )
             );
         } else {
@@ -108,12 +108,12 @@ export default class CommandStationRequest implements CommandDescriptor {
                     }
 
                     let readableName = result.userReadableName;
-                    let stopCodes = result.stopCodes;
+                    let stopCode = result.stopCode;
 
                     await componentInteraction.editReply({
                         content: await services.cts.getFormattedSchedule(
                             readableName,
-                            stopCodes
+                            stopCode
                         ),
                         components: [],
                     });

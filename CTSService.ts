@@ -4,7 +4,12 @@ import csv from "csv-parser";
 import fs from "fs";
 import Fuse from "fuse.js";
 import { TypedJSON } from "typedjson";
-import { SpecializedStopMonitoringResponse, VehicleMode } from "./SIRITypes";
+import {
+    ResponseStopPointsDiscoveryList,
+    SpecializedStopMonitoringResponse,
+    StopMonitoringDelivery,
+    VehicleMode,
+} from "./SIRITypes";
 import { emojiForStation } from "./station_emojis";
 
 // Create and export an enum that stores either tram or bus
@@ -41,17 +46,17 @@ export class LaneVisitsSchedule {
 
 export class StationQueryResult {
     userReadableName: string;
-    stopCodes: string[];
+    stopCode: string;
     isExactMatch: boolean;
 
     // Constructor
     constructor(
         userReadableName: string,
-        stopCodes: string[],
+        stopCode: string,
         isExactMatch: boolean = false
     ) {
         this.userReadableName = userReadableName;
-        this.stopCodes = stopCodes;
+        this.stopCode = stopCode;
         this.isExactMatch = isExactMatch;
     }
 }
@@ -75,69 +80,43 @@ export class CTSService {
 
         let stopCodes = new Map<string, StationQueryResult>();
 
-        // CReate a set to store all stop codes strings
-        let stopCodesStationNames = new Map<string, string>();
-        let stream = fs
-            .createReadStream("./resources/stops.csv")
-            .pipe(csv())
-            .on("data", (data: any) => {
-                // Get name from fifth column and normalize it
-                let name = data.stop_name;
-                let normalizedName = CTSService.normalize(name);
-                let stopCode = data.stop_code;
+        let rawResponse = await api.get("stoppoints-discovery");
 
-                // Check if stopCode doesn't already exist
-                if (!stopCodesStationNames.has(stopCode)) {
-                    // Add stopCode to the set
-                    stopCodesStationNames.set(stopCode, name);
-                } else {
-                    let errorString = `Duplicated stop code: [${stopCode}]`;
-                    if (name === stopCodesStationNames.get(stopCode)) {
-                        errorString += ` (in "${name}" station")`;
-                    } else {
-                        errorString += ` (⚠️ present in both "${name}"" and "${stopCodesStationNames.get(
-                            stopCode
-                        )})" stations`;
-                    }
-
-                    console.error(errorString);
-                }
-
-                let value = stopCodes.get(normalizedName);
-                // If the array doesn't exist yet, create it
-                if (value === undefined) {
-                    value = new StationQueryResult(name, []);
-                    stopCodes.set(normalizedName, value);
-                } else if (
-                    (stopCodes.get(normalizedName)?.userReadableName || "") !==
-                        name &&
-                    process.env.LOG_CONFLICTS === "YES"
-                ) {
-                    console.log(normalizedName);
-                    console.log(
-                        stopCodes.get(normalizedName)?.userReadableName
-                    );
-                    console.log(name);
-                    console.log("=========");
-                }
-
-                // Add the stop code to the array if it doesn't exist yet
-                if (value.stopCodes.indexOf(stopCode) === -1) {
-                    value.stopCodes.push(stopCode);
-                }
-            });
-
-        // Wait for the stream to finish
-        return new Promise((resolve, reject) => {
-            stream.on("end", () => {
-                resolve(new CTSService(api, stopCodes));
-            });
-
-            // Handle errors
-            stream.on("error", (err: any) => {
-                reject(err);
-            });
+        const serializer = new TypedJSON(ResponseStopPointsDiscoveryList, {
+            errorHandler: (error: Error) => {
+                console.log(error);
+                throw new Error("CTS_PARSING_ERROR");
+            },
         });
+
+        let response = serializer.parse(rawResponse.data);
+
+        if (response === undefined) {
+            throw new Error("CTS_PARSING_ERROR");
+        }
+
+        let stopCodesStationNames = new Map<string, string>();
+
+        for (let stop of response.stopPointsDelivery.annotatedStopPointRef) {
+            let name = stop.stopName;
+            let normalizedName = CTSService.normalize(name);
+            let logicalStopCode = stop.extension.logicalStopCode;
+
+            let value = stopCodes.get(normalizedName);
+            // If the array doesn't exist yet, create it
+            if (value === undefined) {
+                value = new StationQueryResult(name, logicalStopCode);
+                stopCodes.set(normalizedName, value);
+            } else {
+                if (logicalStopCode != value.stopCode) {
+                    console.log(
+                        `Warning: stop code for ${name} is ${logicalStopCode} but ${value.stopCode} was already found`
+                    );
+                }
+            }
+        }
+
+        return new CTSService(api, stopCodes);
     }
 
     private constructor(
@@ -156,9 +135,9 @@ export class CTSService {
 
     async getFormattedSchedule(
         userReadableName: string,
-        stopCodes: string[]
+        stopCode: string
     ): Promise<string> {
-        let stops = await this.getVisitsForStopCodes(stopCodes);
+        let stops = await this.getVisitsForStopCode(stopCode);
         let final = `__**Horaires pour la station *${userReadableName}***__`;
         let emoji = emojiForStation(userReadableName);
         if (emoji !== null) {
@@ -204,14 +183,14 @@ export class CTSService {
             throw new Error("STATION_NOT_FOUND");
         }
 
-        let readableName = queryResult.userReadableName;
-        let codesList = queryResult.stopCodes;
-
-        return [readableName, await this.getVisitsForStopCodes(codesList)];
+        return [
+            queryResult.userReadableName,
+            await this.getVisitsForStopCode(queryResult.stopCode),
+        ];
     }
 
-    async getVisitsForStopCodes(
-        stopCodes: string[]
+    async getVisitsForStopCode(
+        stopCode: string
     ): Promise<LaneVisitsSchedule[]> {
         // Note the difference between a stop and a station:
         // A stop is a place where a tram or a bus passes in a specific
@@ -225,13 +204,8 @@ export class CTSService {
         // We query the CTS API for all the stop codes for the station
         // so we actually need to repeat the MonitoringRef query parameter
         // for each stop code.
-        let params = new URLSearchParams();
-        for (let code of stopCodes) {
-            params.append("MonitoringRef", code);
-        }
-
         let rawResponse = await this.api.get("/stop-monitoring", {
-            params: params,
+            params: { MonitoringRef: stopCode },
         });
 
         // We use a strongly typed JSON parser to parse the response

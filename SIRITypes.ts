@@ -796,6 +796,73 @@ export class ResponseStopMonitoringList {
 }
 
 @jsonObject
+export class AnnotatedStopPointStructureExtension {
+    constructor(logicalStopCode: string) {
+        this.logicalStopCode = logicalStopCode;
+    }
+
+    @jsonMember({ name: "LogicalStopCode", isRequired: true })
+    public logicalStopCode: string;
+}
+
+@jsonObject
+export class AnnotatedStopPointStructure {
+    constructor(
+        stopName: string,
+        extension: AnnotatedStopPointStructureExtension,
+        stopPointRef?: string
+    ) {
+        this.stopPointRef = stopPointRef;
+        this.stopName = stopName;
+        this.extension = extension;
+    }
+
+    @jsonMember({ name: "StopPointRef" })
+    public stopPointRef?: string;
+
+    @jsonMember({ name: "StopName", isRequired: true })
+    public stopName: string;
+
+    @jsonMember({ name: "Extension", isRequired: true })
+    public extension: AnnotatedStopPointStructureExtension;
+}
+
+@jsonObject
+export class StopPointsDelivery {
+    constructor(
+        responseTimestamp: Date,
+        annotatedStopPointRef: AnnotatedStopPointStructure[],
+        requestMessageRef?: string
+    ) {
+        this.responseTimestamp = responseTimestamp;
+        this.requestMessageRef = requestMessageRef;
+        this.annotatedStopPointRef = annotatedStopPointRef;
+    }
+
+    @jsonMember({ name: "ResponseTimestamp" })
+    public responseTimestamp: Date;
+
+    @jsonMember({ name: "RequestMessageRef" })
+    public requestMessageRef?: string;
+
+    @jsonArrayMember(AnnotatedStopPointStructure, {
+        name: "AnnotatedStopPointRef",
+        isRequired: true,
+    })
+    public annotatedStopPointRef: AnnotatedStopPointStructure[];
+}
+
+@jsonObject
+export class ResponseStopPointsDiscoveryList {
+    constructor(stopPointsDelivery: StopPointsDelivery) {
+        this.stopPointsDelivery = stopPointsDelivery;
+    }
+
+    @jsonMember({ name: "StopPointsDelivery", isRequired: true })
+    public stopPointsDelivery: StopPointsDelivery;
+}
+
+@jsonObject
 export class SpecializedStopMonitoringResponse {
     constructor(serviceDelivery: SpecializedResponseStopMonitoringList) {
         this.serviceDelivery = serviceDelivery;
