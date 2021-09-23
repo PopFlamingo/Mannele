@@ -246,16 +246,11 @@ export class CTSService {
                     if (mustUseStreet) {
                         extendedStation.distinctiveLocationDescription =
                             geoFeature[0] + " ";
-                        extendedStation.distinctiveLocationDescription +=
-                            geoFeature[1] + " ";
-                        extendedStation.distinctiveLocationDescription +=
-                            geoFeature[2];
-                    } else {
-                        extendedStation.distinctiveLocationDescription =
-                            geoFeature[1] + " ";
-                        extendedStation.distinctiveLocationDescription +=
-                            geoFeature[2];
                     }
+                    extendedStation.distinctiveLocationDescription =
+                        geoFeature[1] + " ";
+                    extendedStation.distinctiveLocationDescription +=
+                        geoFeature[2];
                 }
             }
         }
