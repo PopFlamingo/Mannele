@@ -127,6 +127,9 @@ export class StationQueryResult {
                 logicStation,
             ]);
             this.extendedStations.push(closestProbableExtendedStation);
+        } else {
+            // If the closest probable extended station is closer than 150 meters
+            closestProbableExtendedStation.logicStations.push(logicStation);
         }
     }
 }
@@ -243,11 +246,12 @@ export class CTSService {
                     let extendedStation = value.extendedStations[i];
                     let geoFeature = geoFeatures[i];
 
+                    extendedStation.distinctiveLocationDescription = "";
                     if (mustUseStreet) {
-                        extendedStation.distinctiveLocationDescription =
-                            geoFeature[0] + " ";
+                        extendedStation.distinctiveLocationDescription +=
+                            geoFeature[0] + ", ";
                     }
-                    extendedStation.distinctiveLocationDescription =
+                    extendedStation.distinctiveLocationDescription +=
                         geoFeature[1] + " ";
                     extendedStation.distinctiveLocationDescription +=
                         geoFeature[2];
