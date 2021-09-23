@@ -435,8 +435,8 @@ export class CTSService {
             return b.directionRef - a.directionRef;
         });
 
-        // Sort vehicleStops by line name (this is a stable sort in NodeJS so we still)
-        // benefit from the fact that the lines are sorted by directionRef
+        // Sort vehicleStops by line name (this is a stable sort in NodeJS so we still
+        // benefit from the fact that the lines are sorted by directionRef)
         vehicleStops.sort((a, b) => {
             return a.name.localeCompare(b.name);
         });
