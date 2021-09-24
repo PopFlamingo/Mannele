@@ -332,7 +332,7 @@ export class CTSService {
     async getFormattedSchedule(
         userReadableName: string,
         stopCodes: string[],
-        codesAddresses: Map<string, string> = new Map()
+        codesAddresses: Map<string, [string, SIRILocation]> = new Map()
     ): Promise<string> {
         let other = await this.getVisitsForStopCodes(stopCodes);
         let merged = this.mergeVisitsIfAppropriate(other);
@@ -343,15 +343,17 @@ export class CTSService {
 
         let final = "";
         let separateStations = merged.length > 1;
+        let multipleMerged =
+            !separateStations && (merged[0][0]?.length || 0) > 1;
 
         if (separateStations) {
             final += "⚠️ Avertissement: ";
-            final += `Il semble qu'il existe plusieurs stations nommées "${userReadableName}".\n`;
+            final += `Il y a peut être plusieurs stations nommées "${userReadableName}".\n`;
+            final += "__Voir détails plus bas.__";
+        } else if (multipleMerged) {
             final +=
-                "Cela peut signifier qu'il s'agit de plusieurs stations distinctes";
-            final += " relativement proches les unes des autres MAIS ";
-            final +=
-                "__cela peut également signifier que les données sont simplement erronées__.";
+                "⚠️ Avertissement: Les horaires de plusieurs stations portant le même nom ";
+            final += "ont étés fusionnés (voir détails plus bas).\n\n";
         }
 
         for (let stationsNamesAndSchedules of merged) {
@@ -367,9 +369,12 @@ export class CTSService {
                 final += `  ${emoji}`;
             }
 
-            let possibleAddress = codesAddresses.get(stationNames[0]);
-            if (separateStations && possibleAddress !== undefined) {
-                final += ` (semblant être située non loin du ${possibleAddress})`;
+            let locationData = codesAddresses.get(stationNames[0]);
+            if (separateStations && locationData !== undefined) {
+                let possibleAddress = locationData[0];
+                let location = locationData[1];
+                final += ` [(semblerait située non loin du ${possibleAddress})]`;
+                final += `(<https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}>)`;
             }
             final += "\n";
             // Count the number of unique types of vehicles
@@ -395,9 +400,26 @@ export class CTSService {
                 final += CTSService.formatStops(buses);
             }
         }
+        if (separateStations) {
+            final += "\n\n=============================";
+            final +=
+                "\n\nLa présence de plusieurs stations peut signifier que celles-ci sont ";
+            final +=
+                "réellement distinctes bien que relativement proches les unes des autres MAIS ";
+            final +=
+                "**__cela peut également signifier que les données sont simplement erronées__**.";
+        } else if (multipleMerged) {
+            final +=
+                "\n\nLes horaires ci-dessus correspondent à plusieurs stations ";
+            final +=
+                "théoriquement distinctes mais qui ont été fusionnées ensemble ";
+            final +=
+                " car je considère qu'elles sont suffisament liées les unes aux autres. ";
+            final += "**__Je peux toutefois me tromper.__**";
+        }
 
         final +=
-            "\n\n*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0))*";
+            "\n\n*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
 
         return final;
     }
@@ -451,8 +473,8 @@ export class CTSService {
                                     elementToMergeVisit.name &&
                                 resultSchedule.transportType ===
                                     elementToMergeVisit.transportType &&
-                                resultSchedule.directionRef ===
-                                    elementToMergeVisit.directionRef &&
+                                resultSchedule.destinationName ===
+                                    elementToMergeVisit.destinationName &&
                                 resultSchedule.via === elementToMergeVisit.via
                             );
                         }) != -1

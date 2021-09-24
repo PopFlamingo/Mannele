@@ -7,6 +7,7 @@ import {
 } from "discord.js";
 import { BotServices } from "../BotServices";
 import { LogicStation } from "../CTSService";
+import { SIRILocation } from "../SIRITypes";
 
 export default class CommandStationRequest implements CommandDescriptor {
     commandName: string = "horaires";
@@ -40,7 +41,7 @@ export default class CommandStationRequest implements CommandDescriptor {
         };
 
         let flattenedMatches: FlattenedMatch[] = [];
-        let codesAddresses: Map<string, string> = new Map();
+        let codesAddresses: Map<string, [string, SIRILocation]> = new Map();
 
         for (let match of matches) {
             for (let extendedStation of match.extendedStations) {
@@ -55,7 +56,10 @@ export default class CommandStationRequest implements CommandDescriptor {
                 for (let logicStation of extendedStation.logicStations) {
                     let address = logicStation.addressDescription;
                     if (address !== undefined) {
-                        codesAddresses.set(logicStation.logicStopCode, address);
+                        codesAddresses.set(logicStation.logicStopCode, [
+                            address,
+                            logicStation.location,
+                        ]);
                     }
                 }
             }
