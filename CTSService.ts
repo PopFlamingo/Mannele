@@ -333,7 +333,9 @@ export class CTSService {
         userReadableName: string,
         stopCodes: string[]
     ): Promise<string> {
-        let stops = await this.getVisitsForStopCodes(stopCodes);
+        let other = await this.getVisitsForStopCodes(stopCodes);
+        let merged = this.mergeVisitsIfAppropriate(other);
+        console.log(merged);
         let final = `__**Horaires pour la station *${userReadableName}***__`;
         let emoji = emojiForStation(userReadableName);
         if (emoji !== null) {
@@ -370,6 +372,83 @@ export class CTSService {
     }
 
     async getVisitsForStopCodes(
+        stopCodes: string[]
+    ): Promise<[string, LaneVisitsSchedule[]][]> {
+        let result: [string, LaneVisitsSchedule[]][] = [];
+        for (let stopCode of stopCodes) {
+            let stop = await this.getVisitsForStopCode([stopCode]);
+            result.push([stopCode, stop]);
+        }
+        return result;
+    }
+
+    mergeVisitsIfAppropriate(
+        stationsAndVisits: [string, LaneVisitsSchedule[]][]
+    ): [string[], LaneVisitsSchedule[]][] {
+        let results: [string[], LaneVisitsSchedule[]][] = [];
+        // Make copy of stationsAndVisits array (we need to modify it)
+        let stationsAndVisitsCopy = stationsAndVisits.slice();
+
+        // Initialize the result array
+        if (stationsAndVisits.length > 0) {
+            results = [
+                [[stationsAndVisitsCopy[0][0]], stationsAndVisitsCopy[0][1]],
+            ];
+            // Remove first element from stationsAndVisitsCopy
+            stationsAndVisitsCopy.splice(0, 1);
+        }
+
+        while (stationsAndVisitsCopy.length > 0) {
+            let elementWasAdded = false;
+            let elementToMerge = stationsAndVisitsCopy[0];
+            let elementToMergeStopCode = elementToMerge[0];
+            let elementToMergeVisits = elementToMerge[1];
+            for (let i = 0; i < results.length && !elementWasAdded; i++) {
+                let result = results[i];
+                let resultVisits = result[1];
+                var existingDuplicate = false;
+                for (
+                    let j = 0;
+                    j < elementToMergeVisits.length && !existingDuplicate;
+                    j++
+                ) {
+                    let elementToMergeVisit = elementToMergeVisits[j];
+                    if (
+                        resultVisits.findIndex((resultSchedule) => {
+                            return (
+                                resultSchedule.name ===
+                                    elementToMergeVisit.name &&
+                                resultSchedule.transportType ===
+                                    elementToMergeVisit.transportType &&
+                                resultSchedule.directionRef ===
+                                    elementToMergeVisit.directionRef &&
+                                resultSchedule.via === elementToMergeVisit.via
+                            );
+                        }) != -1
+                    ) {
+                        existingDuplicate = true;
+                    }
+                }
+
+                if (!existingDuplicate) {
+                    results[i][0].push(elementToMergeStopCode);
+                    results[i][1] = results[i][1].concat(elementToMergeVisits);
+                    elementWasAdded = true;
+                }
+            }
+
+            if (!elementWasAdded) {
+                results.push([[elementToMergeStopCode], elementToMergeVisits]);
+            }
+
+            // Remove first element from stationsAndVisitsCopy
+            stationsAndVisitsCopy.splice(0, 1);
+        }
+
+        return results;
+    }
+
+    async getVisitsForStopCode(
         stopCodes: string[]
     ): Promise<LaneVisitsSchedule[]> {
         // Note the difference between a stop and a station:
