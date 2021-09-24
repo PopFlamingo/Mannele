@@ -221,7 +221,6 @@ export class CTSService {
                             logicalStation.location
                         );
                         logicalStation.addressDescription = `${desc.street} ${desc.postalCode} ${desc.city}`;
-                        console.log(logicalStation.addressDescription);
                     }
                 }
             }
