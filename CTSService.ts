@@ -53,6 +53,7 @@ export class LogicStation {
 
     logicStopCode: string;
     location: SIRILocation;
+    addressDescription: string | undefined;
 }
 
 export class ProbableExtendedStation {
@@ -134,6 +135,12 @@ export class StationQueryResult {
     }
 }
 
+type AddressDescription = {
+    street: string;
+    postalCode: string;
+    city: string;
+};
+
 export class CTSService {
     static async make(token: string): Promise<CTSService> {
         // Ensure responses are cached for 30 seconds
@@ -197,34 +204,42 @@ export class CTSService {
 
         // Loop through all query results with their keys and values
         for (const [key, value] of queryResults) {
+            // Count the total number of logical stations in the query result
+            let totalLogicalStations = 0;
+            for (const probableExtendedStation of value.extendedStations) {
+                totalLogicalStations +=
+                    probableExtendedStation.logicStations.length;
+            }
+
+            // If there is more than one logical station, loop through all logical stations
+            if (totalLogicalStations > 1) {
+                for (const probableExtendedStation of value.extendedStations) {
+                    for (const logicalStation of probableExtendedStation.logicStations) {
+                        // And store their address
+                        let desc = await CTSService.getAddressDescription(
+                            geoGouvAPI,
+                            logicalStation.location
+                        );
+                        logicalStation.addressDescription = `${desc.street} ${desc.postalCode} ${desc.city}`;
+                        console.log(logicalStation.addressDescription);
+                    }
+                }
+            }
+
             // If the query results contains more than one probable extended station
             // in other terms if multiple stations that are far away from each other
             // share the same name
             if (value.extendedStations.length > 1) {
                 // We query geo.gouv.fr to get inverse geocoding data
                 // which includes street name, postal code and city.
-                let geoFeatures: [string, string, string][] = [];
+                let geoFeatures: AddressDescription[] = [];
                 for (let extendedStation of value.extendedStations) {
-                    let featureCollection: FeatureCollection = (
-                        await geoGouvAPI.get("reverse", {
-                            params: {
-                                lat: extendedStation.getAverageLocation()
-                                    .latitude,
-                                lon: extendedStation.getAverageLocation()
-                                    .longitude,
-                            },
-                        })
-                    ).data;
-
-                    let firstPoint = featureCollection.features[0].properties;
-
-                    if (firstPoint !== null) {
-                        geoFeatures.push([
-                            firstPoint.name,
-                            firstPoint.postcode,
-                            firstPoint.city,
-                        ]);
-                    }
+                    let addressDescription =
+                        await CTSService.getAddressDescription(
+                            geoGouvAPI,
+                            extendedStation.getAverageLocation()
+                        );
+                    geoFeatures.push(addressDescription);
                 }
 
                 // Detect if postcode + city alone is enough to uniquely identify the station
@@ -232,7 +247,7 @@ export class CTSService {
                 var cityNamePostCodes: Set<string> = new Set();
                 var mustUseStreet = false;
                 for (let geoFeature of geoFeatures) {
-                    let combined = `${geoFeature[1]} ${geoFeature[2]}`;
+                    let combined = `${geoFeature.postalCode} ${geoFeature.city}`;
                     if (cityNamePostCodes.has(combined)) {
                         mustUseStreet = true;
                         break;
@@ -249,17 +264,57 @@ export class CTSService {
                     extendedStation.distinctiveLocationDescription = "";
                     if (mustUseStreet) {
                         extendedStation.distinctiveLocationDescription +=
-                            geoFeature[0] + ", ";
+                            geoFeature.street + ", ";
                     }
                     extendedStation.distinctiveLocationDescription +=
-                        geoFeature[1] + " ";
+                        geoFeature.postalCode + " ";
                     extendedStation.distinctiveLocationDescription +=
-                        geoFeature[2];
+                        geoFeature.city;
                 }
             }
         }
 
         return new CTSService(ctsAPI, queryResults);
+    }
+
+    static async getAddressDescription(
+        axiosInstance: AxiosInstance,
+        location: SIRILocation
+    ): Promise<AddressDescription> {
+        let featureCollection: FeatureCollection = (
+            await axiosInstance.get("reverse", {
+                params: {
+                    lat: location.latitude,
+                    lon: location.longitude,
+                },
+            })
+        ).data;
+
+        let firstPoint = featureCollection.features[0].properties;
+
+        if (firstPoint !== null) {
+            let street = firstPoint.name;
+            let postalCode = firstPoint.postcode;
+            let city = firstPoint.city;
+            // If any is undefined, throw an error
+            if (
+                street === undefined ||
+                postalCode === undefined ||
+                city === undefined
+            ) {
+                throw new Error(
+                    "Could not find address description for location"
+                );
+            }
+
+            return {
+                street: street,
+                postalCode: postalCode,
+                city: city,
+            };
+        } else {
+            throw new Error("Could not find address description for location");
+        }
     }
 
     private constructor(
