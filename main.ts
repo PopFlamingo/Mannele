@@ -11,6 +11,9 @@ require("dotenv").config();
 (async () => {
     const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 
+    // Set environement variable STARTUP_DATE to dd/mm/yyyy
+    process.env.STARTUP_DATE = new Date().toLocaleDateString("fr-FR");
+
     // Store token in a variable from the DISCORD_TOKEN environment variable
     const token = process.env.DISCORD_TOKEN;
 
