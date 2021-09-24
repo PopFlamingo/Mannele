@@ -40,10 +40,10 @@ export default class CommandStationRequest implements CommandDescriptor {
         };
 
         let flattenedMatches: FlattenedMatch[] = [];
+        let codesAddresses: Map<string, string> = new Map();
 
         for (let match of matches) {
             for (let extendedStation of match.extendedStations) {
-                // Coorect code
                 flattenedMatches.push({
                     logicStations: extendedStation.logicStations,
                     stationName: match.userReadableName,
@@ -51,6 +51,13 @@ export default class CommandStationRequest implements CommandDescriptor {
                         extendedStation.distinctiveLocationDescription,
                     isExactMatch: match.isExactMatch,
                 });
+
+                for (let logicStation of extendedStation.logicStations) {
+                    let address = logicStation.addressDescription;
+                    if (address !== undefined) {
+                        codesAddresses.set(logicStation.logicStopCode, address);
+                    }
+                }
             }
         }
 
@@ -67,7 +74,8 @@ export default class CommandStationRequest implements CommandDescriptor {
             await interaction.editReply(
                 await services.cts.getFormattedSchedule(
                     stationRedableName,
-                    stopCodes
+                    stopCodes,
+                    codesAddresses
                 )
             );
         } else {
@@ -153,7 +161,8 @@ export default class CommandStationRequest implements CommandDescriptor {
                     await componentInteraction.editReply({
                         content: await services.cts.getFormattedSchedule(
                             readableName,
-                            stopCodes
+                            stopCodes,
+                            codesAddresses
                         ),
                         components: [],
                     });

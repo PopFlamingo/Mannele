@@ -331,38 +331,69 @@ export class CTSService {
 
     async getFormattedSchedule(
         userReadableName: string,
-        stopCodes: string[]
+        stopCodes: string[],
+        codesAddresses: Map<string, string> = new Map()
     ): Promise<string> {
         let other = await this.getVisitsForStopCodes(stopCodes);
         let merged = this.mergeVisitsIfAppropriate(other);
-        console.log(merged);
-        let final = `__**Horaires pour la station *${userReadableName}***__`;
-        let emoji = emojiForStation(userReadableName);
-        if (emoji !== null) {
-            final += `  ${emoji}`;
-        }
-        final += "\n";
-        // Count the number of unique types of vehicles
-        let types = new Set();
-        for (let stop of stops) {
-            types.add(stop.transportType);
-        }
-        if (types.size == 1) {
-            final += "\n" + CTSService.formatStops(stops);
-        } else {
-            // Get only the "tram" vehicles
-            let trams = stops.filter(
-                (stop: LaneVisitsSchedule) => stop.transportType == "tram"
-            );
-            final += "\n**Trams  :tram: :**\n";
-            final += CTSService.formatStops(trams);
+        // Put the stations with most lines first
+        merged.sort((a, b) => {
+            return b[1].length - a[1].length;
+        });
 
-            // Get only the "bus" vehicles
-            let buses = stops.filter(
-                (stop: LaneVisitsSchedule) => stop.transportType == "bus"
-            );
-            final += "\n\n**Bus  :bus: :**\n";
-            final += CTSService.formatStops(buses);
+        let final = "";
+        let separateStations = merged.length > 1;
+
+        if (separateStations) {
+            final += "⚠️ Avertissement: ";
+            final += `Il semble qu'il existe plusieurs stations nommées "${userReadableName}".\n`;
+            final +=
+                "Cela peut signifier qu'il s'agit de plusieurs stations distinctes";
+            final += " relativement proches les unes des autres MAIS ";
+            final +=
+                "__cela peut également signifier que les données sont simplement erronées__.";
+        }
+
+        for (let stationsNamesAndSchedules of merged) {
+            if (separateStations) {
+                final += "\n\n=============================\n";
+            }
+            let stationNames = stationsNamesAndSchedules[0];
+            let stops = stationsNamesAndSchedules[1];
+
+            final += `__**Horaires pour la station *${userReadableName}***__`;
+            let emoji = emojiForStation(userReadableName);
+            if (emoji !== null) {
+                final += `  ${emoji}`;
+            }
+
+            let possibleAddress = codesAddresses.get(stationNames[0]);
+            if (separateStations && possibleAddress !== undefined) {
+                final += ` (semblant être située non loin du ${possibleAddress})`;
+            }
+            final += "\n";
+            // Count the number of unique types of vehicles
+            let types = new Set();
+            for (let stop of stops) {
+                types.add(stop.transportType);
+            }
+            if (types.size == 1) {
+                final += "\n" + CTSService.formatStops(stops);
+            } else {
+                // Get only the "tram" vehicles
+                let trams = stops.filter(
+                    (stop: LaneVisitsSchedule) => stop.transportType == "tram"
+                );
+                final += "\n**Trams  :tram: :**\n";
+                final += CTSService.formatStops(trams);
+
+                // Get only the "bus" vehicles
+                let buses = stops.filter(
+                    (stop: LaneVisitsSchedule) => stop.transportType == "bus"
+                );
+                final += "\n\n**Bus  :bus: :**\n";
+                final += CTSService.formatStops(buses);
+            }
         }
 
         final +=
@@ -398,15 +429,15 @@ export class CTSService {
             stationsAndVisitsCopy.splice(0, 1);
         }
 
-        while (stationsAndVisitsCopy.length > 0) {
-            let elementWasAdded = false;
+        var existingDuplicate = false;
+        while (stationsAndVisitsCopy.length > 0 && !existingDuplicate) {
             let elementToMerge = stationsAndVisitsCopy[0];
             let elementToMergeStopCode = elementToMerge[0];
             let elementToMergeVisits = elementToMerge[1];
-            for (let i = 0; i < results.length && !elementWasAdded; i++) {
+            for (let i = 0; i < results.length && !existingDuplicate; i++) {
                 let result = results[i];
                 let resultVisits = result[1];
-                var existingDuplicate = false;
+
                 for (
                     let j = 0;
                     j < elementToMergeVisits.length && !existingDuplicate;
@@ -433,16 +464,19 @@ export class CTSService {
                 if (!existingDuplicate) {
                     results[i][0].push(elementToMergeStopCode);
                     results[i][1] = results[i][1].concat(elementToMergeVisits);
-                    elementWasAdded = true;
                 }
-            }
-
-            if (!elementWasAdded) {
-                results.push([[elementToMergeStopCode], elementToMergeVisits]);
             }
 
             // Remove first element from stationsAndVisitsCopy
             stationsAndVisitsCopy.splice(0, 1);
+        }
+
+        // If there is any existing duplicate, we don't merge anything anymore
+        if (existingDuplicate) {
+            results = [];
+            for (let toAdd of stationsAndVisits) {
+                results.push([[toAdd[0]], toAdd[1]]);
+            }
         }
 
         return results;
