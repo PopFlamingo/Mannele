@@ -115,6 +115,76 @@ export function emojiForStation(station: string): string | null {
         case "Droits de l'Homme":
         case "Parlement Européen":
             return "🇪🇺";
+        case "Gallia":
+            return "🐓";
+        case "République":
+            return "🇫🇷";
+        case "Place d'Islande":
+            return "🇮🇸";
+        case "Athènes":
+            return "🇬🇷";
+        case "Avenir":
+            return "🚀";
+        case "Bâle":
+            return "🇨🇭";
+        case "Bois Fleuri":
+            return "🌳 🌸";
+        case "Bruxelles":
+            return "🇧🇪";
+        case "Bugatti":
+            return "🏎";
+        case "Camping":
+            return "⛺️";
+        case "Cerisiers":
+            return "🍒 🌸";
+        case "Centre Sportif":
+            return "💪";
+        case "Château d'Eau":
+            return "💧";
+        case "Chopin":
+            return "🎵";
+        case "Cimetière":
+        case "Cimetière Nord":
+        case "Cimetière Sud":
+            return "🪦";
+        case "Copernic":
+            return "☀️ 🔭";
+        case "Electricité":
+            return "⚡️";
+        case "Gare Centrale":
+            return "🚄 🚈 🚊 🚌";
+        case "Hay Ecomusée":
+            return "🌱 🌍";
+        case "Hôpital de Hautepierre":
+            return "🏥";
+        case "Imprimeurs":
+            return "🖨";
+        case "Jardins":
+            return "🌳 ⛲️ 🌲";
+        case "Jardiniers":
+            return "🧑‍🌾";
+        case "Jardin des deux Rives":
+            return "🇫🇷 🌳 🇩🇪";
+        case "Jean Monnet":
+            return "👨‍🎨";
+        case "Liberté":
+            return "🗽";
+        case "Madrid":
+            return "🇪🇸";
+        case "Ankara":
+            return "🇹🇷";
+        case "Michel Ange":
+            return "👨‍🎨 🇮🇹";
+        case "Mozart":
+            return "🎵";
+        case "Nord":
+            return "🧭";
+        case "Paix":
+            return "🏳";
+        case "Papeterie":
+            return "📄";
+        case "Protection":
+            return "🛡";
         default:
             return null;
     }
