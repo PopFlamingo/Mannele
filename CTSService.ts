@@ -335,7 +335,7 @@ export class CTSService {
         codesAddresses: Map<string, [string, SIRILocation]> = new Map()
     ): Promise<string> {
         let other = await this.getVisitsForStopCodes(stopCodes);
-        let merged = this.mergeVisitsIfAppropriate(other);
+        let merged = this.mergeVisitsIfAppropriate(other, stopCodes);
         // Put the stations with most lines first
         merged.sort((a, b) => {
             return b[1].length - a[1].length;
@@ -343,9 +343,14 @@ export class CTSService {
 
         let final = "";
         let separateStations = merged.length > 1;
-        let multipleMerged =
-            !separateStations && (merged[0][0]?.length || 0) > 1;
-
+        let multipleMerged: boolean;
+        let firstElement = merged[0];
+        if (firstElement !== undefined) {
+            let stations = firstElement[0];
+            multipleMerged = !separateStations && stations.length > 1;
+        } else {
+            multipleMerged = false;
+        }
         if (separateStations) {
             final += "⚠️ Avertissement: ";
             final += `Il y a peut être plusieurs stations nommées "${userReadableName}".\n`;
@@ -373,7 +378,7 @@ export class CTSService {
             if (separateStations && locationData !== undefined) {
                 let possibleAddress = locationData[0];
                 let location = locationData[1];
-                final += ` [(semblerait située non loin du ${possibleAddress})]`;
+                final += ` [(semblerait située non loin de ${possibleAddress})]`;
                 final += `(<https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}>)`;
             }
             final += "\n";
@@ -382,7 +387,7 @@ export class CTSService {
             for (let stop of stops) {
                 types.add(stop.transportType);
             }
-            if (types.size == 1) {
+            if (types.size <= 1) {
                 final += "\n" + CTSService.formatStops(stops);
             } else {
                 // Get only the "tram" vehicles
@@ -429,16 +434,41 @@ export class CTSService {
     ): Promise<[string, LaneVisitsSchedule[]][]> {
         let result: [string, LaneVisitsSchedule[]][] = [];
         for (let stopCode of stopCodes) {
-            let stop = await this.getVisitsForStopCode([stopCode]);
-            result.push([stopCode, stop]);
+            try {
+                let schedule = await this.getVisitsForStopCode([stopCode]);
+                result.push([stopCode, schedule]);
+            } catch (e) {}
         }
         return result;
     }
 
     mergeVisitsIfAppropriate(
-        stationsAndVisits: [string, LaneVisitsSchedule[]][]
+        stationsAndVisits: [string, LaneVisitsSchedule[]][],
+        stopCodes: string[]
     ): [string[], LaneVisitsSchedule[]][] {
         let results: [string[], LaneVisitsSchedule[]][] = [];
+        let mustNotMerge = false;
+        for (let [station, _] of stationsAndVisits) {
+            if (stopCodes.indexOf(station) == -1) {
+                mustNotMerge = true;
+            }
+        }
+
+        if (mustNotMerge || stationsAndVisits.length <= 1) {
+            results = [];
+            for (let stop of stopCodes) {
+                let maybeSchedule = stationsAndVisits.find((element) => {
+                    return element[0] == stop;
+                });
+                if (maybeSchedule !== undefined) {
+                    results.push([[maybeSchedule[0]], maybeSchedule[1]]);
+                } else {
+                    results.push([[stop], []]);
+                }
+            }
+            return results;
+        }
+
         // Make copy of stationsAndVisits array (we need to modify it)
         let stationsAndVisitsCopy = stationsAndVisits.slice();
 
@@ -627,6 +657,10 @@ export class CTSService {
     }
 
     static formatStops(vehicleStops: LaneVisitsSchedule[]): string {
+        if (vehicleStops.length === 0) {
+            return "Il ne semble pas y avoir de passages pour le moment.";
+        }
+
         // Sort vehicleStops by directionRef. This allows us to display the stops
         // in the correct order both for a given line and accross lines
         vehicleStops.sort((a, b) => {
