@@ -32,7 +32,6 @@ export default class CommandStationRequest implements CommandDescriptor {
 
         // We will now flatten the array of matches, what this means is that
         // we are going to take all extended stations and put them in a single array
-        // Same but an object
         type FlattenedMatch = {
             logicStations: LogicStation[];
             stationName: string;
