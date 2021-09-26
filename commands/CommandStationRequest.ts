@@ -40,7 +40,8 @@ export default class CommandStationRequest implements CommandDescriptor {
         };
 
         let flattenedMatches: FlattenedMatch[] = [];
-        let codesAddresses: Map<string, [string, SIRILocation]> = new Map();
+        let codesAddresses: Map<string, [string, SIRILocation, number]> =
+            new Map();
 
         for (let match of matches) {
             for (let extendedStation of match.extendedStations) {
@@ -58,6 +59,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                         codesAddresses.set(logicStation.logicStopCode, [
                             address,
                             logicStation.location,
+                            logicStation.maxDistance,
                         ]);
                     }
                 }

@@ -54,6 +54,8 @@ export class LogicStation {
     logicStopCode: string;
     location: SIRILocation;
     addressDescription: string | undefined;
+    stopCount: number = 1;
+    maxDistance: number = 0;
 }
 
 export class ProbableExtendedStation {
@@ -108,6 +110,7 @@ export class StationQueryResult {
                 closestProbableExtendedStationDistance = distance;
             }
         }
+        let existingStation: LogicStation | undefined = undefined;
         // If there is no closest probable extended station, create one
         if (closestProbableExtendedStation === undefined) {
             closestProbableExtendedStation = new ProbableExtendedStation([
@@ -115,12 +118,37 @@ export class StationQueryResult {
             ]);
             this.extendedStations.push(closestProbableExtendedStation);
         } else if (
-            closestProbableExtendedStation.logicStations.find(
-                (otherStation) =>
-                    otherStation.logicStopCode === logicStation.logicStopCode
-            ) !== undefined
+            (existingStation =
+                closestProbableExtendedStation.logicStations.find(
+                    (otherStation) =>
+                        otherStation.logicStopCode ===
+                        logicStation.logicStopCode
+                )) !== undefined
         ) {
-            // If the closest probable extended station already contains the logic station, do nothing
+            let currentAverageLatSum =
+                existingStation.location.latitude * existingStation.stopCount;
+            let currentAverageLonSum =
+                existingStation.location.longitude * existingStation.stopCount;
+
+            let distance = logicStation.location.distanceTo(
+                existingStation.location
+            );
+
+            if (distance > existingStation.maxDistance) {
+                existingStation.maxDistance = distance;
+            }
+
+            let nextAverageLat =
+                (currentAverageLatSum + logicStation.location.latitude) /
+                (existingStation.stopCount + 1);
+            let nextAverageLon =
+                (currentAverageLonSum + logicStation.location.longitude) /
+                (existingStation.stopCount + 1);
+
+            existingStation.location.latitude = nextAverageLat;
+            existingStation.location.longitude = nextAverageLon;
+
+            existingStation.stopCount += 1;
             return;
         } else if (closestProbableExtendedStationDistance > 150) {
             // If the closest probable extended station is further away than 150 meters, create a new one
@@ -220,6 +248,7 @@ export class CTSService {
                             geoGouvAPI,
                             logicalStation.location
                         );
+
                         logicalStation.addressDescription = `${desc.street} ${desc.postalCode} ${desc.city}`;
                     }
                 }
@@ -332,7 +361,7 @@ export class CTSService {
     async getFormattedSchedule(
         userReadableName: string,
         stopCodes: string[],
-        codesAddresses: Map<string, [string, SIRILocation]> = new Map()
+        codesAddresses: Map<string, [string, SIRILocation, number]> = new Map()
     ): Promise<string> {
         let other = await this.getVisitsForStopCodes(stopCodes);
         let merged = this.mergeVisitsIfAppropriate(other, stopCodes);
@@ -353,7 +382,7 @@ export class CTSService {
         }
         if (separateStations) {
             final += "⚠️ Avertissement: ";
-            final += `Il y a peut être plusieurs stations nommées "${userReadableName}".\n`;
+            final += `Il y a plusieurs résultats pour "${userReadableName}".\n`;
             final += "__Voir détails plus bas.__";
         } else if (multipleMerged) {
             final +=
@@ -361,6 +390,7 @@ export class CTSService {
             final += "ont étés fusionnés (voir détails plus bas).\n\n";
         }
 
+        let schedulesCount = 0;
         for (let stationsNamesAndSchedules of merged) {
             if (separateStations) {
                 final += "\n\n=============================\n";
@@ -368,18 +398,10 @@ export class CTSService {
             let stationNames = stationsNamesAndSchedules[0];
             let stops = stationsNamesAndSchedules[1];
 
-            final += `__**Horaires pour la station *${userReadableName}***__`;
+            final += `__**Horaires pour *${userReadableName}***__`;
             let emoji = emojiForStation(userReadableName);
             if (emoji !== null) {
                 final += `  ${emoji}`;
-            }
-
-            let locationData = codesAddresses.get(stationNames[0]);
-            if (separateStations && locationData !== undefined) {
-                let possibleAddress = locationData[0];
-                let location = locationData[1];
-                final += ` [(semblerait située non loin de ${possibleAddress})]`;
-                final += `(<https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}>)`;
             }
             final += "\n";
             // Count the number of unique types of vehicles
@@ -408,19 +430,23 @@ export class CTSService {
         if (separateStations) {
             final += "\n\n=============================";
             final +=
-                "\n\nLa présence de plusieurs stations peut signifier que celles-ci sont ";
+                '\n\nLes données de la CTS définissent plusieurs "stations" pour votre requête. ';
             final +=
-                "réellement distinctes bien que relativement proches les unes des autres MAIS ";
+                "Cela peut avoir différentes significations selon les cas : stations se complétant entre elles, ";
             final +=
-                "**__cela peut également signifier que les données sont simplement erronées__**.";
+                "stations réellement distinctes, ou encore données tout simplement erronées.";
         } else if (multipleMerged) {
             final +=
-                "\n\nLes horaires ci-dessus correspondent à plusieurs stations ";
+                '\n\nLes horaires ci-dessus correspondent à plusieurs "stations" ';
+            final += "théoriquement distinctes mais que j'ai fusionné ";
             final +=
-                "théoriquement distinctes mais qui ont été fusionnées ensemble ";
+                " car je considère qu'elles semblent se compléter entre elles. ";
             final +=
-                " car je considère qu'elles sont suffisament liées les unes aux autres. ";
-            final += "**__Je peux toutefois me tromper.__**";
+                "Notez que comme toujours les différents arrêts faisant partie d'une même ";
+            final +=
+                "station peuvent être relativement éloignés les uns des autres.";
+            final += final +=
+                "**__Je peux toutefois me tromper et les données peuvent également être erronées.__**";
         }
 
         final +=
