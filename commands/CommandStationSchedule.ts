@@ -6,65 +6,46 @@ import { BotServices } from "../BotServices";
 
 export default class CommandStationSchedule implements CommandDescriptor {
     commandName: string = "horaires";
-    subCommandName: string = "station";
+    subCommandName: string = "u";
 
     async execute(
         interaction: CommandInteraction,
         services: BotServices
     ): Promise<void> {
-        let station = interaction.options.getString("station");
+        let stationParameter = interaction.options.getString("station");
 
         // Save some stats
+        services.stats.increment("COMMAND(horaires,u)", interaction.user.id);
         services.stats.increment(
-            "COMMAND(horaires,station)",
-            interaction.user.id
-        );
-        services.stats.increment(
-            `COMMAND(horaires,station) ${station}`,
+            `COMMAND(horaires,u) ${stationParameter}`,
             interaction.user.id
         );
 
-        if (station === null) {
+        if (stationParameter === null) {
             throw new Error("No station was provided");
         }
-        let stops = await services.cts.getVisitsForStation(station);
-        let final = `__**Horaires pour la station *${station}***__`;
-        let emoji = emojiForStation(station);
-        if (emoji !== null) {
-            final += `  ${emoji}`;
-        }
-        final += "\n";
-        // Count the number of unique types of vehicles
-        let types = new Set();
-        for (let stop of stops) {
-            types.add(stop.transportType);
-        }
-        if (types.size == 1) {
-            final += "\n" + CTSService.formatStops(stops);
-        } else {
-            // Get only the "tram" vehicles
-            let trams = stops.filter(
-                (stop: LaneVisitsSchedule) => stop.transportType == "tram"
-            );
-            final += "\n**Trams  :tram: :**\n";
-            final += CTSService.formatStops(trams);
 
-            // Get only the "bus" vehicles
-            let buses = stops.filter(
-                (stop: LaneVisitsSchedule) => stop.transportType == "bus"
-            );
-            final += "\n\n**Bus  :bus: :**\n";
-            final += CTSService.formatStops(buses);
+        let result = await services.cts.getStopCodes(stationParameter);
+
+        if (result === undefined) {
+            throw new Error(`Station ${stationParameter} not found`);
         }
 
-        await interaction.editReply(final);
+        let userReadableName = result.userReadableName;
+        let stopCode =
+            result.extendedStations[0].logicStations[0].logicStopCode;
+
+        await interaction.editReply(
+            await services.cts.getFormattedSchedule(userReadableName, [
+                stopCode,
+            ])
+        );
     }
 
     handleError? = async (
         error: unknown,
-        interaction: CommandInteraction,
         services: BotServices
-    ): Promise<void> => {
+    ): Promise<string> => {
         console.error(error);
         let anyError: any = error;
         if (
@@ -72,9 +53,13 @@ export default class CommandStationSchedule implements CommandDescriptor {
             anyError.message === "CTS_PARSING_ERROR" ||
             anyError.message === "CTS_TIME_ERROR"
         ) {
-            let message =
-                "Les horaires de la CTS sont momentanément indisponibles.";
-            await interaction.editReply(message);
+            let text = "Les horaires sont indisponibles, cela signifie ";
+            text += "peut être qu'il n'y a pas de passages de bus ou trams";
+            text += " pour le moment.";
+            text +=
+                "\n\n*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0))*";
+
+            return text;
         } else {
             throw error;
         }

@@ -48,12 +48,25 @@ const commands = [
             new SlashCommandSubcommandBuilder()
                 .setName("station")
                 .setDescription(
-                    "Affiche les horaires en direct pour une station (données CTS)"
+                    "Affiche les horaires pour n'importe quelle station (données CTS)"
                 )
                 .addStringOption(
                     new SlashCommandStringOption()
                         .setName("station")
-                        .setDescription("Station à afficher")
+                        .setDescription("Station à rechercher et afficher")
+                        .setRequired(true)
+                )
+        )
+        .addSubcommand(
+            new SlashCommandSubcommandBuilder()
+                .setName("u")
+                .setDescription(
+                    "Affiche les horaires pour une station aux alentours de l'Unistra (données CTS)"
+                )
+                .addStringOption(
+                    new SlashCommandStringOption()
+                        .setName("station")
+                        .setDescription("Nom de la station")
                         .addChoices(makeStationTuplesArray())
                         .setRequired(true)
                 )
@@ -61,15 +74,18 @@ const commands = [
 
     new SlashCommandBuilder()
         .setName("sources")
-        .setDescription("Affiche les sources des données du robot"),
+        .setDescription(
+            "Affiche les sources des données du robot et les avertissements de fiabilité"
+        ),
 ].map((command) => command.toJSON());
 
 const rest = new REST({ version: "9" }).setToken(discordToken);
 
+/*
 (async () => {
     try {
         await rest.put(Routes.applicationCommands(clientId), {
-            body: commands,
+            body: [],
         });
 
         console.log("Successfully registered global application commands.");
@@ -77,8 +93,8 @@ const rest = new REST({ version: "9" }).setToken(discordToken);
         console.error(error);
     }
 })();
+*/
 
-/*
 (async () => {
     try {
         await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
@@ -90,4 +106,3 @@ const rest = new REST({ version: "9" }).setToken(discordToken);
         console.error(error);
     }
 })();
-*/

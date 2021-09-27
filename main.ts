@@ -11,6 +11,9 @@ require("dotenv").config();
 (async () => {
     const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 
+    // Set environement variable LAST_STOP_UPDATE to dd/mm/yyyy
+    process.env.LAST_STOP_UPDATE = new Date().toLocaleDateString("fr-FR");
+
     // Store token in a variable from the DISCORD_TOKEN environment variable
     const token = process.env.DISCORD_TOKEN;
 
@@ -60,7 +63,7 @@ require("dotenv").config();
     // Bot services is an object that is passed as an argument of
     // all command executors and contains all the services that the bot needs
     const botServices = new BotServices(
-        new CTSService(ctsToken),
+        await CTSService.make(ctsToken),
         await StatsService.load("./stats/", statsSlotCount, excludedIDs)
     );
 
@@ -88,6 +91,7 @@ require("dotenv").config();
         error: unknown,
         interaction: CommandInteraction
     ) {
+        console.error(error);
         let errorMessage = "Une erreur est survenue ! :slight_frown:\n";
         errorMessage +=
             "Cela peut être une erreur interne ou provenir d'un service que j'ai tenté de contacter.\n";
@@ -117,11 +121,12 @@ require("dotenv").config();
             } catch (error) {
                 if (commandDescriptor.handleError !== undefined) {
                     try {
-                        await commandDescriptor.handleError(
-                            error,
-                            interaction,
-                            botServices
-                        );
+                        let customErrorMessage =
+                            await commandDescriptor.handleError(
+                                error,
+                                botServices
+                            );
+                        await interaction.editReply(customErrorMessage);
                     } catch (error) {
                         await defaultErrorHandler(error, interaction);
                     }
