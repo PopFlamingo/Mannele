@@ -17,6 +17,18 @@ export default class CommandStationRequest implements CommandDescriptor {
         interaction: CommandInteraction,
         services: BotServices
     ): Promise<void> {
+        if (interaction.guildId === null) {
+            let message =
+                "Cette commande ne fonctionne pas depuis les messages privés ";
+            message +=
+                "actuellement. Utilisez la directement sur un serveur Discord ou ";
+            message +=
+                "bien vous pouvez utiliser la commande `/horaires u` ici pour une station ";
+            message += "aux alentours de l'Unistra.";
+            interaction.editReply("messages");
+            return;
+        }
+
         let stationParameter = interaction.options.getString("station");
         // Save some stats
         services.stats.increment(
