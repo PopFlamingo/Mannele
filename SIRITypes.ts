@@ -863,7 +863,7 @@ export class AnnotatedStopPointStructure {
     @jsonMember({ name: "StopName", isRequired: true })
     public stopName: string;
 
-    @jsonMember({ name: "Location" })
+    @jsonMember({ name: "Location", isRequired: true })
     public location: SIRILocation;
 
     @jsonMember({ name: "Extension", isRequired: true })
