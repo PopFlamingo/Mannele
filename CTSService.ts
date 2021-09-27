@@ -434,7 +434,11 @@ export class CTSService {
             final +=
                 "Cela peut avoir différentes significations selon les cas : stations se complétant entre elles, ";
             final +=
-                "stations réellement distinctes, ou encore données tout simplement erronées.";
+                "stations réellement distinctes, ou encore données tout simplement erronées.\n";
+            final +=
+                "Notez que comme toujours les différents *arrêts* faisant partie d'une même ";
+            final +=
+                "*station* peuvent être relativement éloignés les uns des autres.";
         } else if (multipleMerged) {
             final +=
                 '\n\nLes horaires ci-dessus correspondent à plusieurs "stations" ';
@@ -442,9 +446,9 @@ export class CTSService {
             final +=
                 " car je considère qu'elles semblent se compléter entre elles. ";
             final +=
-                "Notez que comme toujours les différents arrêts faisant partie d'une même ";
+                "Notez que comme toujours les différents *arrêts* faisant partie d'une même ";
             final +=
-                "station peuvent être relativement éloignés les uns des autres.";
+                "*station* peuvent être relativement éloignés les uns des autres.";
             final += final +=
                 "**__Je peux toutefois me tromper et les données peuvent également être erronées.__**";
         }
