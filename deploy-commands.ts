@@ -81,11 +81,10 @@ const commands = [
 
 const rest = new REST({ version: "9" }).setToken(discordToken);
 
-/*
 (async () => {
     try {
         await rest.put(Routes.applicationCommands(clientId), {
-            body: [],
+            body: commands,
         });
 
         console.log("Successfully registered global application commands.");
@@ -93,12 +92,11 @@ const rest = new REST({ version: "9" }).setToken(discordToken);
         console.error(error);
     }
 })();
-*/
 
 (async () => {
     try {
         await rest.put(Routes.applicationGuildCommands(clientId, guildId), {
-            body: commands,
+            body: [],
         });
 
         console.log("Successfully registered application commands.");
