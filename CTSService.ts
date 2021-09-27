@@ -448,8 +448,8 @@ export class CTSService {
             final +=
                 "Notez que comme toujours les différents *arrêts* faisant partie d'une même ";
             final +=
-                "*station* peuvent être relativement éloignés les uns des autres.";
-            final += final +=
+                "*station* peuvent être relativement éloignés les uns des autres. ";
+            final +=
                 "**__Je peux toutefois me tromper et les données peuvent également être erronées.__**";
         }
 
