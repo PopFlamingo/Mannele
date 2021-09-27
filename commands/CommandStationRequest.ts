@@ -25,7 +25,7 @@ export default class CommandStationRequest implements CommandDescriptor {
             message +=
                 "bien vous pouvez utiliser la commande `/horaires u` ici pour une station ";
             message += "aux alentours de l'Unistra.";
-            interaction.editReply("messages");
+            interaction.editReply(message);
             return;
         }
 
