@@ -3,7 +3,13 @@ import { setupCache } from "axios-cache-adapter";
 import csv from "csv-parser";
 import fs from "fs";
 import Fuse from "fuse.js";
-import { TypedJSON } from "typedjson";
+import {
+    jsonArrayMember,
+    jsonMapMember,
+    jsonMember,
+    jsonObject,
+    TypedJSON,
+} from "typedjson";
 import { FeatureCollection, GeoJSON } from "geojson";
 import {
     ResponseStopPointsDiscoveryList,
@@ -45,29 +51,42 @@ export class LaneVisitsSchedule {
     }
 }
 
+@jsonObject
 export class LogicStation {
     constructor(logicStopCode: string, location: SIRILocation) {
         this.logicStopCode = logicStopCode;
         this.location = location;
     }
 
+    @jsonMember
     logicStopCode: string;
+
+    @jsonMember
     location: SIRILocation;
-    addressDescription: string | undefined;
+
+    @jsonMember
+    addressDescription?: string;
+
+    @jsonMember
     stopCount: number = 1;
+
+    @jsonMember
     maxDistance: number = 0;
 }
 
+@jsonObject
 export class ProbableExtendedStation {
     constructor(logicStations: LogicStation[]) {
         this.logicStations = logicStations;
     }
 
     // All stations that are part of the probable extended station
+    @jsonArrayMember(LogicStation)
     logicStations: LogicStation[];
 
     // A string that enables differentiating between different probable extended stations
-    distinctiveLocationDescription: string | undefined;
+    @jsonMember
+    distinctiveLocationDescription?: string;
 
     // Returns the average location of the probable extended station
     getAverageLocation(): SIRILocation {
@@ -83,12 +102,17 @@ export class ProbableExtendedStation {
     }
 }
 
+@jsonObject
 export class StationQueryResult {
+    @jsonMember
     userReadableName: string;
+
+    @jsonMember
     isExactMatch: boolean;
+
+    @jsonArrayMember(ProbableExtendedStation)
     extendedStations: ProbableExtendedStation[];
 
-    // Constructor
     constructor(userReadableName: string, isExactMatch: boolean = false) {
         this.userReadableName = userReadableName;
         this.isExactMatch = isExactMatch;
@@ -163,6 +187,20 @@ export class StationQueryResult {
     }
 }
 
+@jsonObject
+class SavedQueryResults {
+    constructor(map: Map<string, StationQueryResult>, date: Date) {
+        this.map = map;
+        this.date = date;
+    }
+
+    @jsonMapMember(String, StationQueryResult)
+    map: Map<string, StationQueryResult>;
+
+    @jsonMember
+    date: Date;
+}
+
 type AddressDescription = {
     street: string;
     postalCode: string;
@@ -193,112 +231,134 @@ export class CTSService {
 
         let queryResults = new Map<string, StationQueryResult>();
 
-        let rawResponse = await ctsAPI.get("stoppoints-discovery");
+        try {
+            let rawResponse = await ctsAPI.get("stoppoints-discovery");
 
-        const serializer = new TypedJSON(ResponseStopPointsDiscoveryList, {
-            errorHandler: (error: Error) => {
-                console.log(error);
+            const serializer = new TypedJSON(ResponseStopPointsDiscoveryList, {
+                errorHandler: (error: Error) => {
+                    console.log(error);
+                    throw new Error("CTS_PARSING_ERROR");
+                },
+            });
+
+            let response = serializer.parse(rawResponse.data);
+
+            if (response === undefined) {
                 throw new Error("CTS_PARSING_ERROR");
-            },
-        });
-
-        let response = serializer.parse(rawResponse.data);
-
-        if (response === undefined) {
-            throw new Error("CTS_PARSING_ERROR");
-        }
-
-        let stopCodesStationNames = new Map<string, string>();
-
-        for (let stop of response.stopPointsDelivery.annotatedStopPointRef) {
-            let name = stop.stopName;
-            let normalizedName = CTSService.normalize(name);
-            let logicalStopCode = stop.extension.logicalStopCode;
-
-            let value = queryResults.get(normalizedName);
-            // If the query result doesn't exist yet, create it
-            if (value === undefined) {
-                value = new StationQueryResult(name, false);
-                value.addLogicStation(
-                    new LogicStation(logicalStopCode, stop.location)
-                );
-                queryResults.set(normalizedName, value);
-            } else {
-                value.addLogicStation(
-                    new LogicStation(logicalStopCode, stop.location)
-                );
-            }
-        }
-
-        // Loop through all query results with their keys and values
-        for (const [key, value] of queryResults) {
-            // Count the total number of logical stations in the query result
-            let totalLogicalStations = 0;
-            for (const probableExtendedStation of value.extendedStations) {
-                totalLogicalStations +=
-                    probableExtendedStation.logicStations.length;
             }
 
-            // If there is more than one logical station, loop through all logical stations
-            if (totalLogicalStations > 1) {
+            for (let stop of response.stopPointsDelivery
+                .annotatedStopPointRef) {
+                let name = stop.stopName;
+                let normalizedName = CTSService.normalize(name);
+                let logicalStopCode = stop.extension.logicalStopCode;
+
+                let value = queryResults.get(normalizedName);
+                // If the query result doesn't exist yet, create it
+                if (value === undefined) {
+                    value = new StationQueryResult(name, false);
+                    value.addLogicStation(
+                        new LogicStation(logicalStopCode, stop.location)
+                    );
+                    queryResults.set(normalizedName, value);
+                } else {
+                    value.addLogicStation(
+                        new LogicStation(logicalStopCode, stop.location)
+                    );
+                }
+            }
+
+            // Loop through all query results with their keys and values
+            for (const [key, value] of queryResults) {
+                // Count the total number of logical stations in the query result
+                let totalLogicalStations = 0;
                 for (const probableExtendedStation of value.extendedStations) {
-                    for (const logicalStation of probableExtendedStation.logicStations) {
-                        // And store their address
-                        let desc = await CTSService.getAddressDescription(
-                            geoGouvAPI,
-                            logicalStation.location
-                        );
+                    totalLogicalStations +=
+                        probableExtendedStation.logicStations.length;
+                }
 
-                        logicalStation.addressDescription = `${desc.street} ${desc.postalCode} ${desc.city}`;
+                // If there is more than one logical station, loop through all logical stations
+                if (totalLogicalStations > 1) {
+                    for (const probableExtendedStation of value.extendedStations) {
+                        for (const logicalStation of probableExtendedStation.logicStations) {
+                            // And store their address
+                            let desc = await CTSService.getAddressDescription(
+                                geoGouvAPI,
+                                logicalStation.location
+                            );
+
+                            logicalStation.addressDescription = `${desc.street} ${desc.postalCode} ${desc.city}`;
+                        }
+                    }
+                }
+
+                // If the query results contains more than one probable extended station
+                // in other terms if multiple stations that are far away from each other
+                // share the same name
+                if (value.extendedStations.length > 1) {
+                    // We query geo.gouv.fr to get inverse geocoding data
+                    // which includes street name, postal code and city.
+                    let geoFeatures: AddressDescription[] = [];
+                    for (let extendedStation of value.extendedStations) {
+                        let addressDescription =
+                            await CTSService.getAddressDescription(
+                                geoGouvAPI,
+                                extendedStation.getAverageLocation()
+                            );
+                        geoFeatures.push(addressDescription);
+                    }
+
+                    // Detect if postcode + city alone is enough to uniquely identify the station
+                    // and set mustUseStreet to true otherwise
+                    var cityNamePostCodes: Set<string> = new Set();
+                    var mustUseStreet = false;
+                    for (let geoFeature of geoFeatures) {
+                        let combined = `${geoFeature.postalCode} ${geoFeature.city}`;
+                        if (cityNamePostCodes.has(combined)) {
+                            mustUseStreet = true;
+                            break;
+                        } else {
+                            cityNamePostCodes.add(combined);
+                        }
+                    }
+
+                    // Use the geocoding results to create the distinctiveLocationDescription
+                    for (let i = 0; i < value.extendedStations.length; i++) {
+                        let extendedStation = value.extendedStations[i];
+                        let geoFeature = geoFeatures[i];
+
+                        extendedStation.distinctiveLocationDescription = "";
+                        if (mustUseStreet) {
+                            extendedStation.distinctiveLocationDescription +=
+                                geoFeature.street + ", ";
+                        }
+                        extendedStation.distinctiveLocationDescription +=
+                            geoFeature.postalCode + " ";
+                        extendedStation.distinctiveLocationDescription +=
+                            geoFeature.city;
                     }
                 }
             }
 
-            // If the query results contains more than one probable extended station
-            // in other terms if multiple stations that are far away from each other
-            // share the same name
-            if (value.extendedStations.length > 1) {
-                // We query geo.gouv.fr to get inverse geocoding data
-                // which includes street name, postal code and city.
-                let geoFeatures: AddressDescription[] = [];
-                for (let extendedStation of value.extendedStations) {
-                    let addressDescription =
-                        await CTSService.getAddressDescription(
-                            geoGouvAPI,
-                            extendedStation.getAverageLocation()
-                        );
-                    geoFeatures.push(addressDescription);
-                }
-
-                // Detect if postcode + city alone is enough to uniquely identify the station
-                // and set mustUseStreet to true otherwise
-                var cityNamePostCodes: Set<string> = new Set();
-                var mustUseStreet = false;
-                for (let geoFeature of geoFeatures) {
-                    let combined = `${geoFeature.postalCode} ${geoFeature.city}`;
-                    if (cityNamePostCodes.has(combined)) {
-                        mustUseStreet = true;
-                        break;
-                    } else {
-                        cityNamePostCodes.add(combined);
-                    }
-                }
-
-                // Use the geocoding results to create the distinctiveLocationDescription
-                for (let i = 0; i < value.extendedStations.length; i++) {
-                    let extendedStation = value.extendedStations[i];
-                    let geoFeature = geoFeatures[i];
-
-                    extendedStation.distinctiveLocationDescription = "";
-                    if (mustUseStreet) {
-                        extendedStation.distinctiveLocationDescription +=
-                            geoFeature.street + ", ";
-                    }
-                    extendedStation.distinctiveLocationDescription +=
-                        geoFeature.postalCode + " ";
-                    extendedStation.distinctiveLocationDescription +=
-                        geoFeature.city;
-                }
+            let saveData = new SavedQueryResults(queryResults, new Date());
+            let savedResultsSerializer = new TypedJSON(SavedQueryResults);
+            let savedResults = savedResultsSerializer.stringify(saveData);
+            // Save to ./data/last-query-results.json
+            fs.writeFileSync(
+                "./resources/last-query-results.json",
+                savedResults
+            );
+        } catch (e) {
+            console.log(e);
+            // Load the last query results from ./data/last-query-results.json
+            let savedResultsSerializer = new TypedJSON(SavedQueryResults);
+            let savedResults = savedResultsSerializer.parse(
+                fs.readFileSync("./resources/last-query-results.json", "utf8")
+            );
+            if (savedResults !== undefined) {
+                queryResults = savedResults.map;
+            } else {
+                throw new Error(`Couldn't recover from ${e}`);
             }
         }
 
