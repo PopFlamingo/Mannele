@@ -1,6 +1,7 @@
 import { CommandDescriptor } from "../CommandDescriptor";
 import {
     CommandInteraction,
+    DMChannel,
     Message,
     MessageActionRow,
     MessageSelectMenu,
@@ -17,18 +18,6 @@ export default class CommandStationRequest implements CommandDescriptor {
         interaction: CommandInteraction,
         services: BotServices
     ): Promise<void> {
-        if (interaction.guildId === null) {
-            let message =
-                "Cette commande ne fonctionne pas depuis les messages privés ";
-            message +=
-                "actuellement. Utilisez la directement sur un serveur Discord ou ";
-            message +=
-                "bien vous pouvez utiliser la commande `/horaires u` ici pour une station ";
-            message += "aux alentours de l'Unistra.";
-            interaction.editReply(message);
-            return;
-        }
-
         let stationParameter = interaction.options.getString("station");
         // Save some stats
         services.stats.increment(
@@ -122,13 +111,33 @@ export default class CommandStationRequest implements CommandDescriptor {
                 message += "sûr...";
             }
 
-            let reply = await interaction.editReply({
+            let maybeMessage = await interaction.editReply({
                 content: message,
                 components: [row],
             });
 
-            if (!(reply instanceof Message)) {
-                throw new Error("Reply is not a Message");
+            let reply: Message | undefined;
+
+            if (interaction.guildId === null) {
+                let user = await interaction.client.users.fetch(
+                    interaction.user.id
+                );
+
+                let channel = (await user.dmChannel) || (await user.createDM());
+                let lastMessages = await channel.messages.fetch({
+                    limit: 1,
+                });
+
+                reply = lastMessages?.first();
+            } else {
+                if (!(maybeMessage instanceof Message)) {
+                    throw new Error("Reply is not a Message");
+                }
+                reply = maybeMessage;
+            }
+
+            if (reply === undefined) {
+                throw new Error("Reply is undefined");
             }
 
             const collector = reply.createMessageComponentCollector({
