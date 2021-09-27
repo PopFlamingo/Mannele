@@ -525,7 +525,9 @@ export class CTSService {
         }
 
         final +=
-            "\n\n*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
+            "\n\n*Certains horaires peuvent être théoriques - Some schedules may be theorical*\n";
+        final +=
+            "*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
 
         return final;
     }
