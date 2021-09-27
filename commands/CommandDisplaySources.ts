@@ -24,23 +24,20 @@ export default class CommandStationSchedule implements CommandDescriptor {
             "Application, produit ou service intégrant les informations ";
         message += "publiques d'horaires des lignes de bus et tramways ";
         message += "issues de l'API open data de la Compagnie des transports ";
-        message += "Strasbourgeois (CTS).";
+        message += "Strasbourgeois (CTS). ";
         message +=
-            "\nDonnées d'addressage [produites par Etalab](<https://adresse.data.gouv.fr/donnees-nationales>) et obtenues depuis [l'API Adresses](<https://geo.api.gouv.fr/adresse>), ";
-        message +=
-            "elles sont publiées sous la [Licence Ouverte](<https://www.etalab.gouv.fr/licence-ouverte-open-licence>) et ";
-        message += `ont été mises à jour le ${startupDateString}.`;
-
-        message +=
-            "\n\nLes informations concernant les horaires sont récupérées en ";
+            "Les informations concernant les noms et références des stations ";
+        message += `ont été récupérées la dernière fois le : ${startupDateString}. `;
+        message += "Les informations concernant les horaires sont récupérées ";
         message +=
             " depuis les serveurs de la CTS (ou depuis une mémoire cache) lors d'un appel à ";
         message += "une commande correspondante . Certaines données peuvent ";
         message += "correspondre à des horaires théoriques.\n\n";
-
         message +=
-            "Les informations concernant les noms et références des stations ";
-        message += `ont été mises à jour le : ${startupDateString}.`;
+            "Données d'addressage [produites par Etalab](<https://adresse.data.gouv.fr/donnees-nationales>) et obtenues depuis [l'API Adresses](<https://geo.api.gouv.fr/adresse>), ";
+        message +=
+            "elles sont publiées sous la [Licence Ouverte](<https://www.etalab.gouv.fr/licence-ouverte-open-licence>) et ";
+        message += `ont été récupérées la dernière fois le ${startupDateString}.`;
 
         await interaction.editReply({ content: message });
     }
