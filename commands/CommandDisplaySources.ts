@@ -14,7 +14,7 @@ export default class CommandStationSchedule implements CommandDescriptor {
         services.stats.increment("COMMAND(sources)", interaction.user.id);
 
         // Init from STARTUP_DATE env var
-        let startupDateString = process.env.STARTUP_DATE;
+        let startupDateString = process.env.LAST_STOP_UPDATE;
         let message =
             "Application, produit ou service intégrant les informations ";
         message += "publiques d'horaires des lignes de bus et tramways ";

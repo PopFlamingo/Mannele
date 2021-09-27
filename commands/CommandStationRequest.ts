@@ -222,7 +222,7 @@ export default class CommandStationRequest implements CommandDescriptor {
             text +=
                 "\nMa base de données des noms et références de stations a été ";
             text += "mise à jour la dernière fois le ";
-            text += process.env.LAST_STATIONS_UPDATE_DATE || "[inconnu]";
+            text += process.env.LAST_STOP_UPDATE || "[inconnu]";
             text +=
                 ".\n\n*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0))*";
 

@@ -232,6 +232,9 @@ export class CTSService {
         let queryResults = new Map<string, StationQueryResult>();
 
         try {
+            if (process.env.LOAD_STOPS_FROM_CACHE === "YES") {
+                throw new Error("LOAD_FROM_CACHE");
+            }
             let rawResponse = await ctsAPI.get("stoppoints-discovery");
 
             const serializer = new TypedJSON(ResponseStopPointsDiscoveryList, {
@@ -349,7 +352,13 @@ export class CTSService {
                 savedResults
             );
         } catch (e) {
-            console.log(e);
+            if (e instanceof Error && e.message === "LOAD_FROM_CACHE") {
+                console.log("Loading from cache");
+            } else {
+                console.error("Loading from cache because of error:");
+                console.error(e);
+            }
+
             // Load the last query results from ./data/last-query-results.json
             let savedResultsSerializer = new TypedJSON(SavedQueryResults);
             let savedResults = savedResultsSerializer.parse(
@@ -357,8 +366,10 @@ export class CTSService {
             );
             if (savedResults !== undefined) {
                 queryResults = savedResults.map;
+                process.env.LAST_STOP_UPDATE =
+                    savedResults.date.toLocaleDateString("fr-FR");
             } else {
-                throw new Error(`Couldn't recover from ${e}`);
+                throw new Error(`Couldn't recover from error`);
             }
         }
 
