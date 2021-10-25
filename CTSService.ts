@@ -795,7 +795,7 @@ export class CTSService {
             // For each departureDate
             for (let departureDate of vehicleStop.departureDates) {
                 // Count the number of minutes until the departure
-                let minutes = Math.floor(
+                let minutes = Math.round(
                     (departureDate.getTime() - new Date().getTime()) / 1000 / 60
                 );
                 // If minutes is negative, set it to 0
