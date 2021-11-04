@@ -8,6 +8,7 @@ Mannele (Alsacian name for [Stutenkerl](https://en.wikipedia.org/wiki/Stutenkerl
 
 
 ## Installation
+**Linux:**
 Install Docker.io
 ```bash
 sudo apt install docker.io
