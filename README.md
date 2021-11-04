@@ -13,6 +13,8 @@ Install Docker.io
 sudo apt install docker.io
 ```
 
+**macOS:**
+You can install Docker desktop [directly from the Docker website](https://www.docker.com/products/docker-desktop) or using `brew cask install docker`
 ## Usage
 Commands to run on Mannele's directory
 ```bash
