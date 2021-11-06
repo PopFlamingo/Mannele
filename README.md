@@ -36,4 +36,4 @@ docker logs mannele
 Don't hesitate to contribute by opening issues and pull requests to help with bugs and enhancements.
 
 ## Licence
-[MIT](https://choosealicense.com/licenses/mit/)
+This bot is licenced under the MIT License (see the LICENSE file).
