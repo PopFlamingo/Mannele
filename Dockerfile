@@ -1,4 +1,4 @@
-FROM node:16.11.1-bullseye-slim
+FROM node:18
 
 ENV USER=mannele
 
