@@ -1,4 +1,4 @@
-dist/
-node_modules/
-screenshots/
+dist
+node_modules
+screenshots
 package-lock.json
