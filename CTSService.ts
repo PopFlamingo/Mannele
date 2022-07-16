@@ -463,9 +463,9 @@ export class CTSService {
 
     // Async function updateStopCodes()
     async updateStopCodes() {
-        this.stopCodes = await CTSService.getStopCodes(this.api);
+        this.stopCodes = await CTSService.loadStopCodesMap(this.api);
     }
-    
+
     async getFormattedSchedule(
         userReadableName: string,
         stopCodes: string[],
