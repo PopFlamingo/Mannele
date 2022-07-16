@@ -224,6 +224,12 @@ export class CTSService {
             timeout: 8000,
         });
 
+        let queryResults = await CTSService.loadStopCodesMap(ctsAPI);
+
+        return new CTSService(ctsAPI, queryResults);
+    }
+
+    static async loadStopCodesMap(ctsAPI: AxiosInstance): Promise<Map<string, StationQueryResult>> {
         let geoGouvAPI = axios.create({
             baseURL: "https://api-adresse.data.gouv.fr",
             timeout: 8000,
@@ -351,6 +357,8 @@ export class CTSService {
                 "./resources/last-query-results.json",
                 savedResults
             );
+            process.env.LAST_STOP_UPDATE = CTSService.formatDateFR(saveData.date)
+
         } catch (e) {
             if (e instanceof Error && e.message === "LOAD_FROM_CACHE") {
                 console.log("Loading from cache");
@@ -366,15 +374,39 @@ export class CTSService {
             );
             if (savedResults !== undefined) {
                 queryResults = savedResults.map;
-                process.env.LAST_STOP_UPDATE =
-                    savedResults.date.toLocaleDateString("fr-FR");
+                // Same as above but this time store full date + time using the argument of the function
+                process.env.LAST_STOP_UPDATE = CTSService.formatDateFR(savedResults.date)
+
             } else {
                 throw new Error(`Couldn't recover from error`);
             }
         }
 
-        return new CTSService(ctsAPI, queryResults);
+        return queryResults
     }
+
+    /**
+     * Format a date in the "dd/mm/yyyy à hh:mm (heure de Paris)" format
+     * @param date Date to format
+     */
+    static formatDateFR(date: Date): string {
+        const dateString = date.toLocaleDateString("fr-FR", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            timeZone: "Europe/Paris"
+        });
+
+        const timeString = date.toLocaleTimeString("fr-FR", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+            timeZone: "Europe/Paris"
+        });
+
+        return `${dateString} à ${timeString} (heure de Paris)`;
+    }
+
 
     static async getAddressDescription(
         axiosInstance: AxiosInstance,
@@ -428,6 +460,12 @@ export class CTSService {
     // A map of array of stop codes, where keys are
     // normalized stop names
     private stopCodes: Map<string, StationQueryResult> = new Map();
+
+
+    // Async function updateStopCodes()
+    async updateStopCodes() {
+        this.stopCodes = await CTSService.loadStopCodesMap(this.api);
+    }
 
     async getFormattedSchedule(
         userReadableName: string,
@@ -540,7 +578,7 @@ export class CTSService {
             try {
                 let schedule = await this.getVisitsForStopCode([stopCode]);
                 result.push([stopCode, schedule]);
-            } catch (e) {}
+            } catch (e) { }
         }
         return result;
     }
@@ -603,11 +641,11 @@ export class CTSService {
                         resultVisits.findIndex((resultSchedule) => {
                             return (
                                 resultSchedule.name ===
-                                    elementToMergeVisit.name &&
+                                elementToMergeVisit.name &&
                                 resultSchedule.transportType ===
-                                    elementToMergeVisit.transportType &&
+                                elementToMergeVisit.transportType &&
                                 resultSchedule.destinationName ===
-                                    elementToMergeVisit.destinationName &&
+                                elementToMergeVisit.destinationName &&
                                 resultSchedule.via === elementToMergeVisit.via
                             );
                         }) != -1

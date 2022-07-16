@@ -10,10 +10,6 @@ require("dotenv").config();
 
 (async () => {
     const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
-
-    // Set environement variable LAST_STOP_UPDATE to dd/mm/yyyy
-    process.env.LAST_STOP_UPDATE = new Date().toLocaleDateString("fr-FR");
-
     // Store token in a variable from the DISCORD_TOKEN environment variable
     const token = process.env.DISCORD_TOKEN;
 
@@ -66,6 +62,15 @@ require("dotenv").config();
         await CTSService.make(ctsToken),
         await StatsService.load("./stats/", statsSlotCount, excludedIDs)
     );
+
+    // Update every 6 hours
+    setInterval(async () => {
+        try {
+            await botServices.cts.updateStopCodes()
+        } catch (e) {
+            console.error("Couldn't update stop codes", e)
+        }
+    }, 1000 * 60 * 60 * 6);
 
     // Create a collection associating command (and subcommand) names with their executors
     const commands = new Collection<string, CommandDescriptor>();
