@@ -460,6 +460,12 @@ export class CTSService {
     // normalized stop names
     private stopCodes: Map<string, StationQueryResult> = new Map();
 
+
+    // Async function updateStopCodes()
+    async updateStopCodes() {
+        this.stopCodes = await CTSService.getStopCodes(this.api);
+    }
+    
     async getFormattedSchedule(
         userReadableName: string,
         stopCodes: string[],
