@@ -357,6 +357,7 @@ export class CTSService {
                 "./resources/last-query-results.json",
                 savedResults
             );
+            process.env.LAST_STOP_UPDATE = CTSService.formatDateFR(saveData.date)
 
         } catch (e) {
             if (e instanceof Error && e.message === "LOAD_FROM_CACHE") {
