@@ -185,6 +185,8 @@ export function emojiForStation(station: string): string | null {
             return "📄";
         case "Protection":
             return "🛡";
+        case "Krimmeri Meinau":
+            return "⚽️";
         default:
             return null;
     }
