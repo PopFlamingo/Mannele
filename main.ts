@@ -63,14 +63,14 @@ require("dotenv").config();
         await StatsService.load("./stats/", statsSlotCount, excludedIDs)
     );
 
-    // Update every 2 minutes
+    // Update every 6 hours
     setInterval(async () => {
         try {
             await botServices.cts.updateStopCodes()
         } catch (e) {
             console.error("Couldn't update stop codes", e)
         }
-    }, 1000 * 60 * 2);
+    }, 1000 * 60 * 60 * 6);
 
     // Create a collection associating command (and subcommand) names with their executors
     const commands = new Collection<string, CommandDescriptor>();
