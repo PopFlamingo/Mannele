@@ -224,7 +224,7 @@ export class CTSService {
             timeout: 8000,
         });
 
-        let queryResults =  await CTSService.loadStopCodesMap(ctsAPI);
+        let queryResults = await CTSService.loadStopCodesMap(ctsAPI);
 
         return new CTSService(ctsAPI, queryResults);
     }
@@ -373,22 +373,8 @@ export class CTSService {
             );
             if (savedResults !== undefined) {
                 queryResults = savedResults.map;
-                process.env.LAST_STOP_UPDATE =
-                    savedResults.date.toLocaleDateString("fr-FR");
-
-            // Same as above but this time store full date + time using the argument of the function
-            process.env.LAST_STOP_UPDATE = savedResults.date.toLocaleDateString(
-                "fr-FR",
-                {
-                    year: "numeric",
-                    month: "2-digit",
-                    day: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: false,
-                    timeZone: "Europe/Paris"
-                }
-            )
+                // Same as above but this time store full date + time using the argument of the function
+                process.env.LAST_STOP_UPDATE = CTSService.formatDateFR(savedResults.date)
 
             } else {
                 throw new Error(`Couldn't recover from error`);
@@ -397,6 +383,29 @@ export class CTSService {
 
         return queryResults
     }
+
+    /**
+     * Format a date in the "dd/mm/yyyy à hh:mm (heure de Paris)" format
+     * @param date Date to format
+     */
+    static formatDateFR(date: Date): string {
+        const dateString = date.toLocaleDateString("fr-FR", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            timeZone: "Europe/Paris"
+        });
+
+        const timeString = date.toLocaleTimeString("fr-FR", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+            timeZone: "Europe/Paris"
+        });
+
+        return `${dateString} à ${timeString} (heure de Paris)`;
+    }
+
 
     static async getAddressDescription(
         axiosInstance: AxiosInstance,
@@ -562,7 +571,7 @@ export class CTSService {
             try {
                 let schedule = await this.getVisitsForStopCode([stopCode]);
                 result.push([stopCode, schedule]);
-            } catch (e) {}
+            } catch (e) { }
         }
         return result;
     }
@@ -625,11 +634,11 @@ export class CTSService {
                         resultVisits.findIndex((resultSchedule) => {
                             return (
                                 resultSchedule.name ===
-                                    elementToMergeVisit.name &&
+                                elementToMergeVisit.name &&
                                 resultSchedule.transportType ===
-                                    elementToMergeVisit.transportType &&
+                                elementToMergeVisit.transportType &&
                                 resultSchedule.destinationName ===
-                                    elementToMergeVisit.destinationName &&
+                                elementToMergeVisit.destinationName &&
                                 resultSchedule.via === elementToMergeVisit.via
                             );
                         }) != -1
