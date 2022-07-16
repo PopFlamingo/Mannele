@@ -375,6 +375,21 @@ export class CTSService {
                 queryResults = savedResults.map;
                 process.env.LAST_STOP_UPDATE =
                     savedResults.date.toLocaleDateString("fr-FR");
+
+            // Same as above but this time store full date + time using the argument of the function
+            process.env.LAST_STOP_UPDATE = savedResults.date.toLocaleDateString(
+                "fr-FR",
+                {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: false,
+                    timeZone: "Europe/Paris"
+                }
+            )
+
             } else {
                 throw new Error(`Couldn't recover from error`);
             }

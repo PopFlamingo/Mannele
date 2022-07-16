@@ -12,7 +12,18 @@ require("dotenv").config();
     const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
 
     // Set environement variable LAST_STOP_UPDATE to dd/mm/yyyy
-    process.env.LAST_STOP_UPDATE = new Date().toLocaleDateString("fr-FR");
+    process.env.LAST_STOP_UPDATE = new Date().toLocaleDateString(
+        "fr-FR",
+        {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+            timeZone: "Europe/Paris"
+        }
+    )
 
     // Store token in a variable from the DISCORD_TOKEN environment variable
     const token = process.env.DISCORD_TOKEN;
