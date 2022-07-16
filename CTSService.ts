@@ -225,11 +225,11 @@ export class CTSService {
         });
 
         let queryResults =  await CTSService.loadStopCodesMap(ctsAPI);
-        
+
         return new CTSService(ctsAPI, queryResults);
     }
 
-    static async loadStopCodesMap(ctsAPI: AxiosInstance): Promise<Map<string, StationQueryResult> {
+    static async loadStopCodesMap(ctsAPI: AxiosInstance): Promise<Map<string, StationQueryResult>> {
         let geoGouvAPI = axios.create({
             baseURL: "https://api-adresse.data.gouv.fr",
             timeout: 8000,
