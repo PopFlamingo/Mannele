@@ -224,6 +224,12 @@ export class CTSService {
             timeout: 8000,
         });
 
+        let queryResults =  await CTSService.loadStopCodesMap(ctsAPI);
+        
+        return new CTSService(ctsAPI, queryResults);
+    }
+
+    static async loadStopCodesMap(ctsAPI: AxiosInstance): Promise<Map<string, StationQueryResult> {
         let geoGouvAPI = axios.create({
             baseURL: "https://api-adresse.data.gouv.fr",
             timeout: 8000,
@@ -351,6 +357,7 @@ export class CTSService {
                 "./resources/last-query-results.json",
                 savedResults
             );
+
         } catch (e) {
             if (e instanceof Error && e.message === "LOAD_FROM_CACHE") {
                 console.log("Loading from cache");
@@ -373,7 +380,7 @@ export class CTSService {
             }
         }
 
-        return new CTSService(ctsAPI, queryResults);
+        return queryResults
     }
 
     static async getAddressDescription(
