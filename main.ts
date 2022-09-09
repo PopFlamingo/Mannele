@@ -10,6 +10,7 @@ require("dotenv").config();
 
 (async () => {
     const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
+
     // Store token in a variable from the DISCORD_TOKEN environment variable
     const token = process.env.DISCORD_TOKEN;
 
@@ -147,5 +148,12 @@ require("dotenv").config();
     });
 
     // Login to Discord
-    client.login(token);
+    await client.login(token);
+
+    // Set activity to the name of the main command
+    if (client.user !== null) {
+        client.user.setActivity('/horaires trams & bus', { type: 'PLAYING' });
+    } else {
+        console.error("Unexpected null client.user")
+    }
 })();
