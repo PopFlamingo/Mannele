@@ -1,8 +1,4 @@
-import {
-    SlashCommandBuilder,
-    SlashCommandSubcommandsOnlyBuilder,
-} from "@discordjs/builders";
-import { CommandInteraction } from "discord.js";
+import { CacheType, ChatInputCommandInteraction } from "discord.js";
 import { BotServices } from "./BotServices";
 
 // Create a TypeScript interface for the command descriptor.
@@ -10,7 +6,7 @@ export interface CommandDescriptor {
     commandName: string;
     subCommandName: string | null;
     execute(
-        interaction: CommandInteraction,
+        interaction: ChatInputCommandInteraction<CacheType>,
         services: BotServices
     ): Promise<void>;
     handleError?: (error: unknown, services: BotServices) => Promise<string>;

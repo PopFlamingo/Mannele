@@ -1,7 +1,5 @@
 import { CommandDescriptor } from "../CommandDescriptor";
-import { CommandInteraction } from "discord.js";
-import { CTSService, LaneVisitsSchedule } from "../CTSService";
-import { emojiForStation } from "../station_emojis";
+import { ChatInputCommandInteraction, CacheType } from "discord.js";
 import { BotServices } from "../BotServices";
 
 export default class CommandStationSchedule implements CommandDescriptor {
@@ -9,7 +7,7 @@ export default class CommandStationSchedule implements CommandDescriptor {
     subCommandName: string = "u";
 
     async execute(
-        interaction: CommandInteraction,
+        interaction: ChatInputCommandInteraction<CacheType>,
         services: BotServices
     ): Promise<void> {
         let stationParameter = interaction.options.getString("station");
