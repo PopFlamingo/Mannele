@@ -1,10 +1,11 @@
 import { CommandDescriptor } from "../CommandDescriptor";
 import {
-    CommandInteraction,
-    DMChannel,
+    ChatInputCommandInteraction,
+    CacheType,
     Message,
-    MessageActionRow,
-    MessageSelectMenu,
+    ActionRowBuilder,
+    SelectMenuBuilder,
+    ComponentType,
 } from "discord.js";
 import { BotServices } from "../BotServices";
 import { LogicStation } from "../CTSService";
@@ -15,7 +16,7 @@ export default class CommandStationRequest implements CommandDescriptor {
     subCommandName: string = "station";
 
     async execute(
-        interaction: CommandInteraction,
+        interaction: ChatInputCommandInteraction<CacheType>,
         services: BotServices
     ): Promise<void> {
         let stationParameter = interaction.options.getString("station");
@@ -93,8 +94,8 @@ export default class CommandStationRequest implements CommandDescriptor {
                 return { label: name, value: `${index}` };
             });
 
-            const row = new MessageActionRow().addComponents(
-                new MessageSelectMenu()
+            const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(
+                new SelectMenuBuilder()
                     .setCustomId("station_choice")
                     .setPlaceholder("Choix de la station")
                     .addOptions(options)
@@ -141,7 +142,7 @@ export default class CommandStationRequest implements CommandDescriptor {
             }
 
             const collector = reply.createMessageComponentCollector({
-                componentType: "SELECT_MENU",
+                componentType: ComponentType.SelectMenu,
                 time: 600000,
             });
 
@@ -232,7 +233,7 @@ export default class CommandStationRequest implements CommandDescriptor {
         }
     }
 
-    handleError? = async (
+    handleError?= async (
         error: unknown,
         services: BotServices
     ): Promise<string> => {

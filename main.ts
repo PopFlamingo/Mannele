@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Client, Intents, Collection, CommandInteraction } from "discord.js";
+import { Client, GatewayIntentBits, Collection, CommandInteraction, ActivityType } from "discord.js";
 import { BotServices } from "./BotServices";
 import { CommandDescriptor, isCommandDescriptor } from "./CommandDescriptor";
 import { CTSService } from "./CTSService";
@@ -9,7 +9,7 @@ import { StatsService } from "./StatsService";
 require("dotenv").config();
 
 (async () => {
-    const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
+    const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
     // Store token in a variable from the DISCORD_TOKEN environment variable
     const token = process.env.DISCORD_TOKEN;
@@ -106,7 +106,7 @@ require("dotenv").config();
 
     // Handle slash commands
     client.on("interactionCreate", async (interaction) => {
-        if (!interaction.isCommand()) {
+        if (!interaction.isChatInputCommand()) {
             return;
         }
 
@@ -152,7 +152,7 @@ require("dotenv").config();
 
     // Set activity to the name of the main command
     if (client.user !== null) {
-        client.user.setActivity('/horaires trams & bus', { type: 'PLAYING' });
+        client.user.setActivity('/horaires trams & bus', { type: ActivityType.Playing });
     } else {
         console.error("Unexpected null client.user")
     }

@@ -1,14 +1,13 @@
 import { CommandDescriptor } from "../CommandDescriptor";
-import { CommandInteraction } from "discord.js";
+import { ChatInputCommandInteraction, CacheType } from "discord.js";
 import { BotServices } from "../BotServices";
-import fs from "fs";
 
 export default class CommandStationSchedule implements CommandDescriptor {
     commandName: string = "sources";
     subCommandName: string | null = null;
 
     async execute(
-        interaction: CommandInteraction,
+        interaction: ChatInputCommandInteraction<CacheType>,
         services: BotServices
     ): Promise<void> {
         services.stats.increment("COMMAND(sources)", interaction.user.id);

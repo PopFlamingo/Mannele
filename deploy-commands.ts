@@ -2,10 +2,10 @@ import {
     SlashCommandBuilder,
     SlashCommandStringOption,
     SlashCommandSubcommandBuilder,
-} from "@discordjs/builders";
+    Routes,
+    REST
+} from "discord.js";
 import { stationCodes } from "./data";
-const { REST } = require("@discordjs/rest");
-const { Routes } = require("discord-api-types/v9");
 require("dotenv").config();
 
 // Load DISCORD_TOKEN from environment variables and throw an error if it's not set
@@ -26,15 +26,15 @@ if (clientId == null) {
     throw new Error("CLIENT_ID environment variable not set");
 }
 
-function makeStationTuplesArray(): [string, string][] {
+function makeStationTuplesArray(): { name: string, value: string }[] {
     // Get all keys of the stationCodes object
     let stationCodesKeys = Object.keys(stationCodes);
     // Sort them alphabetically
     stationCodesKeys.sort();
     // Create an array of tuples
-    let stationTuples: [string, string][] = [];
+    let stationTuples: { name: string, value: string }[] = [];
     for (let i = 0; i < stationCodesKeys.length; i++) {
-        stationTuples.push([stationCodesKeys[i], stationCodesKeys[i]]);
+        stationTuples.push({ name: stationCodesKeys[i], value: stationCodesKeys[i] });
     }
 
     return stationTuples;
@@ -67,7 +67,7 @@ const commands = [
                     new SlashCommandStringOption()
                         .setName("station")
                         .setDescription("Nom de la station")
-                        .addChoices(makeStationTuplesArray())
+                        .addChoices(...makeStationTuplesArray())
                         .setRequired(true)
                 )
         ),
