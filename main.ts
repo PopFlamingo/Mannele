@@ -30,7 +30,7 @@ require("dotenv").config();
     }
 
     let statsSlotCount = parseInt(statsSlotCountString);
-    if (statsSlotCount === NaN) {
+    if (Number.isNaN(statsSlotCount)) {
         throw new Error(
             "STATS_SLOT_COUNT environment variable is not a number"
         );
