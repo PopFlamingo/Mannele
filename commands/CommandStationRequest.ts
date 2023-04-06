@@ -4,7 +4,7 @@ import {
     CacheType,
     Message,
     ActionRowBuilder,
-    SelectMenuBuilder,
+    StringSelectMenuBuilder,
     ComponentType,
 } from "discord.js";
 import { BotServices } from "../BotServices";
@@ -94,8 +94,8 @@ export default class CommandStationRequest implements CommandDescriptor {
                 return { label: name, value: `${index}` };
             });
 
-            const row = new ActionRowBuilder<SelectMenuBuilder>().addComponents(
-                new SelectMenuBuilder()
+            const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+                new StringSelectMenuBuilder()
                     .setCustomId("station_choice")
                     .setPlaceholder("Choix de la station")
                     .addOptions(options)
@@ -162,7 +162,7 @@ export default class CommandStationRequest implements CommandDescriptor {
 
                 try {
                     await componentInteraction.deferUpdate();
-                    if (!componentInteraction.isSelectMenu()) {
+                    if (!componentInteraction.isStringSelectMenu()) {
                         throw new Error("COMPONENT_NOT_SELECT_MENU");
                     }
 
