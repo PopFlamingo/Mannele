@@ -1,5 +1,6 @@
 import axios, { AxiosInstance } from "axios";
-import { setupCache } from "axios-cache-adapter";
+import axiosCacheAdapter from "axios-cache-adapter";
+const { setupCache } = axiosCacheAdapter;
 import fs from "fs";
 import Fuse from "fuse.js";
 import {
@@ -15,8 +16,8 @@ import {
     SpecializedStopMonitoringResponse,
     SIRILocation,
     VehicleMode,
-} from "./SIRITypes";
-import { emojiForStation } from "./station_emojis";
+} from "./SIRITypes.js";
+import { emojiForStation } from "./station_emojis.js";
 
 // Create and export an enum that stores either tram or bus
 export enum TransportType {
@@ -210,7 +211,7 @@ export class CTSService {
     static async make(token: string): Promise<CTSService> {
         // Ensure responses are cached for 30 seconds
         // to avoid hitting the CTS API too often
-        const cache = setupCache({ maxAge: 30 * 1000 });
+        const cache = setupCache({maxAge: 30 * 1000});
 
         // Create an axios instance to access the CTS API
         let ctsAPI = axios.create({

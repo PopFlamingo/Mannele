@@ -1,5 +1,5 @@
-import { CTSService } from "./CTSService";
-import { StatsService } from "./StatsService";
+import { CTSService } from "./CTSService.js";
+import { StatsService } from "./StatsService.js";
 
 export class BotServices {
     cts: CTSService;

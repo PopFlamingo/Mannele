@@ -5,8 +5,9 @@ import {
     Routes,
     REST
 } from "discord.js";
-import { stationCodes } from "./data";
-require("dotenv").config();
+import { stationCodes } from "./data.js";
+import dotenv from "dotenv";
+dotenv.config();
 
 // Load DISCORD_TOKEN from environment variables and throw an error if it's not set
 let discordToken = process.env.DISCORD_TOKEN;

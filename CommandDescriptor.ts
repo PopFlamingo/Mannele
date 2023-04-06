@@ -1,5 +1,5 @@
 import { CacheType, ChatInputCommandInteraction } from "discord.js";
-import { BotServices } from "./BotServices";
+import { BotServices } from "./BotServices.js";
 
 // Create a TypeScript interface for the command descriptor.
 export interface CommandDescriptor {
