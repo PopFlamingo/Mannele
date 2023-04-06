@@ -3,7 +3,7 @@ import { Client, GatewayIntentBits, Collection, CommandInteraction, ActivityType
 import { BotServices } from "./BotServices.js";
 import { CommandDescriptor, isCommandDescriptor } from "./CommandDescriptor.js";
 import { CTSService } from "./CTSService.js";
-import * as fs from "fs";
+import { readdirSync } from "fs";
 import { StatsService } from "./StatsService.js";
 import dotenv from "dotenv";
 dotenv.config();
@@ -76,8 +76,7 @@ setInterval(async () => {
 const commands = new Collection<string, CommandDescriptor>();
 
 // Get the file names of all the ts files in the commands directory and remove their extension
-const commandFiles = fs
-    .readdirSync("./commands")
+const commandFiles = readdirSync("./commands")
     .filter((file) => file.endsWith(".ts"))
     .map((file) => file.replace(".ts", ".js"));
 
