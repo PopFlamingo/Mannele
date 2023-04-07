@@ -937,7 +937,7 @@ export class CTSService {
     async getStopCodes(
         stopName: string
     ): Promise<StationQueryResult | undefined> {
-        const maybeMatch = await this.searchStops(stopName);
+        const maybeMatch = await this.searchExtendedStations(stopName);
         if (maybeMatch === undefined) {
             return undefined;
         } else {
@@ -945,16 +945,20 @@ export class CTSService {
         }
     }
 
-    // Get the stop codes associated with a station name
-    async searchStops(stationName: string): Promise<StationQueryResult[]> {
+    /**
+     * 
+     * @param searchedStationName The name of the station to search for
+     * @returns An array of StationQueryResult objects
+     */
+    async searchExtendedStations(searchedStationName: string): Promise<StationQueryResult[]> {
         // Normalize the stop name
-        stationName = CTSService.normalize(stationName);
+        searchedStationName = CTSService.normalize(searchedStationName);
 
         let exactlyContained: string[] = [];
         // If we find a string that contains the station name, we add it to the array
         for (const key of this.stopCodes.keys()) {
             // Check if key string contains the stop name
-            if (key.indexOf(stationName) !== -1) {
+            if (key.indexOf(searchedStationName) !== -1) {
                 exactlyContained.push(key);
             }
         }
@@ -962,7 +966,7 @@ export class CTSService {
         // If the array only has one element and it is an exact match, return it
         if (
             exactlyContained.length === 1 &&
-            exactlyContained[0] === stationName
+            exactlyContained[0] === searchedStationName
         ) {
             let result = this.stopCodes.get(exactlyContained[0]);
             if (result === undefined) {
@@ -983,7 +987,7 @@ export class CTSService {
         // If we don't, make a fuzzy search instead
         const stationsCanonicalNames = Array.from(this.stopCodes.keys());
         const fuse = new Fuse(stationsCanonicalNames, { includeScore: true });
-        let fuzzyResults = fuse.search(stationName);
+        let fuzzyResults = fuse.search(searchedStationName);
 
         // Do not include results with a too bad score
         fuzzyResults = fuzzyResults.filter(

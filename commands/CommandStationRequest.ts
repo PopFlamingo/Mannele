@@ -30,9 +30,9 @@ export default class CommandStationRequest implements CommandDescriptor {
             throw new Error("No station was provided");
         }
 
-        let matches = (await services.cts.searchStops(stationQuery)) || [];
+        let matches = (await services.cts.searchExtendedStations(stationQuery)) || [];
 
-        
+
         type FlattenedMatch = {
             logicStations: LogicStation[];
             stationName: string;
