@@ -211,7 +211,7 @@ export class CTSService {
     static async make(token: string): Promise<CTSService> {
         // Ensure responses are cached for 30 seconds
         // to avoid hitting the CTS API too often
-        const cache = setupCache({maxAge: 30 * 1000});
+        const cache = setupCache({ maxAge: 30 * 1000 });
 
         // Create an axios instance to access the CTS API
         let ctsAPI = axios.create({
