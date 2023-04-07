@@ -10,7 +10,7 @@ import {
     jsonObject,
     TypedJSON,
 } from "typedjson";
-import { FeatureCollection, GeoJSON } from "geojson";
+import { FeatureCollection } from "geojson";
 import {
     ResponseStopPointsDiscoveryList,
     SpecializedStopMonitoringResponse,
