@@ -32,8 +32,7 @@ export default class CommandStationRequest implements CommandDescriptor {
 
         let matches = (await services.cts.searchStops(stationQuery)) || [];
 
-        // We will now flatten the array of matches, what this means is that
-        // we are going to take all extended stations and put them in a single array
+        
         type FlattenedMatch = {
             logicStations: LogicStation[];
             stationName: string;
@@ -41,8 +40,10 @@ export default class CommandStationRequest implements CommandDescriptor {
             isExactMatch: boolean;
         };
 
+        // We will now flatten the array of matches, what this means is that
+        // we are going to take all extended stations and put them in a single array
         let flattenedMatches: FlattenedMatch[] = [];
-        let codesAddresses: Map<string, [string, SIRILocation, number]> =
+        let stationsCodesToLocationInfo: Map<string, [string, SIRILocation, number]> =
             new Map();
 
         for (let match of matches) {
@@ -56,10 +57,10 @@ export default class CommandStationRequest implements CommandDescriptor {
                 });
 
                 for (let logicStation of extendedStation.logicStations) {
-                    let address = logicStation.geocodedAddress;
-                    if (address !== undefined) {
-                        codesAddresses.set(logicStation.logicStopCode, [
-                            address,
+                    let geocodedAddress = logicStation.geocodedAddress;
+                    if (geocodedAddress !== undefined) {
+                        stationsCodesToLocationInfo.set(logicStation.logicStopCode, [
+                            geocodedAddress,
                             logicStation.location,
                             logicStation.maxDistance,
                         ]);
@@ -82,7 +83,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                 await services.cts.getFormattedSchedule(
                     stationRedableName,
                     stopCodes,
-                    codesAddresses
+                    stationsCodesToLocationInfo
                 )
             );
         } else {
@@ -189,7 +190,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                         content: await services.cts.getFormattedSchedule(
                             readableName,
                             stopCodes,
-                            codesAddresses
+                            stationsCodesToLocationInfo
                         ),
                         components: [],
                     });
