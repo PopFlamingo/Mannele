@@ -56,7 +56,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                 });
 
                 for (let logicStation of extendedStation.logicStations) {
-                    let address = logicStation.addressDescription;
+                    let address = logicStation.geocodedAddress;
                     if (address !== undefined) {
                         codesAddresses.set(logicStation.logicStopCode, [
                             address,

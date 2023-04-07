@@ -99,7 +99,7 @@ export class LogicStation {
     location: SIRILocation;
 
     @jsonMember
-    addressDescription?: string;
+    geocodedAddress?: string;
 
     @jsonMember
     stopCount: number = 1;
@@ -331,7 +331,7 @@ export class CTSService {
                                 logicalStation.location
                             );
 
-                            logicalStation.addressDescription = `${desc.street} ${desc.postalCode} ${desc.city}`;
+                            logicalStation.geocodedAddress = `${desc.street} ${desc.postalCode} ${desc.city}`;
                         }
                     }
                 }
