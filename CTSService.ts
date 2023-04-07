@@ -312,7 +312,7 @@ export class CTSService {
             }
 
             // Loop through all query results with their keys and values
-            for (const [key, value] of queryResults) {
+            for (const [_, value] of queryResults) {
                 // Count the total number of logical stations in the query result
                 let totalLogicalStations = 0;
                 for (const probableExtendedStation of value.extendedStations) {
