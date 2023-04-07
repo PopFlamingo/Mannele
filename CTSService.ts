@@ -499,7 +499,6 @@ export class CTSService {
             final += "ont étés fusionnés (voir détails plus bas).\n\n";
         }
 
-        let schedulesCount = 0;
         for (let stationsNamesAndSchedules of merged) {
             if (separateStations) {
                 final += "\n\n=============================\n";
