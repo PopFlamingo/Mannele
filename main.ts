@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Client, GatewayIntentBits, Collection, CommandInteraction, ActivityType } from "discord.js";
+import { Client, GatewayIntentBits, CommandInteraction, ActivityType } from "discord.js";
 import { BotServices } from "./BotServices.js";
 import { CommandDescriptor, isCommandDescriptor } from "./CommandDescriptor.js";
 import { CTSService } from "./CTSService.js";
@@ -73,7 +73,7 @@ setInterval(async () => {
 }, 1000 * 60 * 60 * 6);
 
 // Create a collection associating command (and subcommand) names with their executors
-const commands = new Collection<string, CommandDescriptor>();
+const commands = new Map<string, CommandDescriptor>();
 
 // Get the file names of all the ts files in the commands directory and remove their extension
 const commandFiles = readdirSync("./commands")
