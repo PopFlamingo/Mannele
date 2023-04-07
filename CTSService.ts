@@ -326,7 +326,7 @@ export class CTSService {
                     for (const probableExtendedStation of value.extendedStations) {
                         for (const logicalStation of probableExtendedStation.logicStations) {
                             // ...and store their address
-                            const desc = await CTSService.getAddressDescription(
+                            const desc = await CTSService.getReverseGeocodedAddress(
                                 geoGouvAPI,
                                 logicalStation.location
                             );
@@ -345,7 +345,7 @@ export class CTSService {
                     const geoFeatures: AddressDescription[] = [];
                     for (let extendedStation of value.extendedStations) {
                         const addressDescription =
-                            await CTSService.getAddressDescription(
+                            await CTSService.getReverseGeocodedAddress(
                                 geoGouvAPI,
                                 extendedStation.getAverageLocation()
                             );
@@ -443,7 +443,7 @@ export class CTSService {
     }
 
 
-    static async getAddressDescription(
+    static async getReverseGeocodedAddress(
         axiosInstance: AxiosInstance,
         location: SIRILocation
     ): Promise<AddressDescription> {
