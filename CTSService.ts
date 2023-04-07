@@ -25,15 +25,49 @@ export enum TransportType {
     bus = "bus",
 }
 
+/**
+ * Represents the visit times of for a lane at a station
+ */
 export class LaneVisitsSchedule {
+    /**
+     * The name of the lane
+     */
     name: string;
+
+    /**
+     * The type of transport 
+     */
     transportType: VehicleMode;
+
+    /**
+     * An integer representing the direction of the lane
+     */
     directionRef: number;
+
+    /**
+     * The name of the destination
+    */
     destinationName: string;
+
+    /**
+     * The name of a place that the vehicle will pass through before reaching the destination, if any.
+    */
     via: string | undefined;
+
+    /**
+     * An array of dates representing the departure times of the lane
+    */
     departureDates: Date[];
 
-    // Constructor
+    /**
+     * Constructs a new LaneVisitsSchedule
+     * @param name The name of the lane
+     * @param transportType The type of transport
+     * @param directionRef An integer representing the direction of the lane
+     * @param destinationName The name of the destination
+     * @param via The name of a place that the vehicle will pass through before reaching the destination, if any.
+     * @param departureDates An array of dates representing the departure times of the lane
+     */
     constructor(
         name: string,
         transportType: VehicleMode,
