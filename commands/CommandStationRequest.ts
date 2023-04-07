@@ -19,18 +19,18 @@ export default class CommandStationRequest implements CommandDescriptor {
         interaction: ChatInputCommandInteraction<CacheType>,
         services: BotServices
     ): Promise<void> {
-        let stationParameter = interaction.options.getString("station");
+        let stationQuery = interaction.options.getString("station");
         // Save some stats
         services.stats.increment(
             "COMMAND(horaires,station)",
             interaction.user.id
         );
 
-        if (stationParameter === null || stationParameter === "") {
+        if (stationQuery === null || stationQuery === "") {
             throw new Error("No station was provided");
         }
 
-        let matches = (await services.cts.searchStops(stationParameter)) || [];
+        let matches = (await services.cts.searchStops(stationQuery)) || [];
 
         // We will now flatten the array of matches, what this means is that
         // we are going to take all extended stations and put them in a single array

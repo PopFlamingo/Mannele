@@ -320,11 +320,11 @@ export class CTSService {
                         probableExtendedStation.logicStations.length;
                 }
 
-                // If there is more than one logical station, loop through all logical stations
+                // If there is more than one logical station, loop through all logical stations...
                 if (totalLogicalStations > 1) {
                     for (const probableExtendedStation of value.extendedStations) {
                         for (const logicalStation of probableExtendedStation.logicStations) {
-                            // And store their address
+                            // ...and store their address
                             let desc = await CTSService.getAddressDescription(
                                 geoGouvAPI,
                                 logicalStation.location
