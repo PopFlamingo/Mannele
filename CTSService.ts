@@ -292,9 +292,9 @@ export class CTSService {
 
             for (let stop of response.stopPointsDelivery
                 .annotatedStopPointRef) {
-                let name = stop.stopName;
-                let normalizedName = CTSService.normalize(name);
-                let logicalStopCode = stop.extension.logicalStopCode;
+                const name = stop.stopName;
+                const normalizedName = CTSService.normalize(name);
+                const logicalStopCode = stop.extension.logicalStopCode;
 
                 let value = queryResults.get(normalizedName);
                 // If the query result doesn't exist yet, create it
@@ -325,7 +325,7 @@ export class CTSService {
                     for (const probableExtendedStation of value.extendedStations) {
                         for (const logicalStation of probableExtendedStation.logicStations) {
                             // ...and store their address
-                            let desc = await CTSService.getAddressDescription(
+                            const desc = await CTSService.getAddressDescription(
                                 geoGouvAPI,
                                 logicalStation.location
                             );
@@ -341,9 +341,9 @@ export class CTSService {
                 if (value.extendedStations.length > 1) {
                     // We query geo.gouv.fr to get inverse geocoding data
                     // which includes street name, postal code and city.
-                    let geoFeatures: AddressDescription[] = [];
+                    const geoFeatures: AddressDescription[] = [];
                     for (let extendedStation of value.extendedStations) {
-                        let addressDescription =
+                        const addressDescription =
                             await CTSService.getAddressDescription(
                                 geoGouvAPI,
                                 extendedStation.getAverageLocation()
@@ -353,8 +353,8 @@ export class CTSService {
 
                     // Detect if postcode + city alone is enough to uniquely identify the station
                     // and set mustUseStreet to true otherwise
-                    var cityNamePostCodes: Set<string> = new Set();
-                    var mustUseStreet = false;
+                    const cityNamePostCodes: Set<string> = new Set();
+                    let mustUseStreet = false;
                     for (let geoFeature of geoFeatures) {
                         let combined = `${geoFeature.postalCode} ${geoFeature.city}`;
                         if (cityNamePostCodes.has(combined)) {
@@ -367,8 +367,8 @@ export class CTSService {
 
                     // Use the geocoding results to create the distinctiveLocationDescription
                     for (let i = 0; i < value.extendedStations.length; i++) {
-                        let extendedStation = value.extendedStations[i];
-                        let geoFeature = geoFeatures[i];
+                        const extendedStation = value.extendedStations[i];
+                        const geoFeature = geoFeatures[i];
 
                         extendedStation.distinctiveLocationDescription = "";
                         if (mustUseStreet) {
@@ -383,9 +383,9 @@ export class CTSService {
                 }
             }
 
-            let saveData = new SavedQueryResults(queryResults, new Date());
-            let savedResultsSerializer = new TypedJSON(SavedQueryResults);
-            let savedResults = savedResultsSerializer.stringify(saveData);
+            const saveData = new SavedQueryResults(queryResults, new Date());
+            const savedResultsSerializer = new TypedJSON(SavedQueryResults);
+            const savedResults = savedResultsSerializer.stringify(saveData);
             // Save to ./data/last-query-results.json
             fs.writeFileSync(
                 "./resources/last-query-results.json",
@@ -402,8 +402,8 @@ export class CTSService {
             }
 
             // Load the last query results from ./data/last-query-results.json
-            let savedResultsSerializer = new TypedJSON(SavedQueryResults);
-            let savedResults = savedResultsSerializer.parse(
+            const savedResultsSerializer = new TypedJSON(SavedQueryResults);
+            const savedResults = savedResultsSerializer.parse(
                 fs.readFileSync("./resources/last-query-results.json", "utf8")
             );
             if (savedResults !== undefined) {
@@ -446,7 +446,7 @@ export class CTSService {
         axiosInstance: AxiosInstance,
         location: SIRILocation
     ): Promise<AddressDescription> {
-        let featureCollection: FeatureCollection = (
+        const featureCollection: FeatureCollection = (
             await axiosInstance.get("reverse", {
                 params: {
                     lat: location.latitude,
@@ -455,12 +455,12 @@ export class CTSService {
             })
         ).data;
 
-        let firstPoint = featureCollection.features[0].properties;
+        const firstPoint = featureCollection.features[0].properties;
 
         if (firstPoint !== null) {
-            let street = firstPoint.name;
-            let postalCode = firstPoint.postcode;
-            let city = firstPoint.city;
+            const street = firstPoint.name;
+            const postalCode = firstPoint.postcode;
+            const city = firstPoint.city;
             // If any is undefined, throw an error
             if (
                 street === undefined ||
@@ -514,9 +514,9 @@ export class CTSService {
         });
 
         let final = "";
-        let separateStations = merged.length > 1;
+        const separateStations = merged.length > 1;
         let multipleMerged: boolean;
-        let firstElement = merged[0];
+        const firstElement = merged[0];
         if (firstElement !== undefined) {
             let stations = firstElement[0];
             multipleMerged = !separateStations && stations.length > 1;
@@ -537,17 +537,16 @@ export class CTSService {
             if (separateStations) {
                 final += "\n\n=============================\n";
             }
-            let stationNames = stationsNamesAndSchedules[0];
-            let stops = stationsNamesAndSchedules[1];
+            const stops = stationsNamesAndSchedules[1];
 
             final += `__**Horaires pour *${userReadableName}***__`;
-            let emoji = emojiForStation(userReadableName);
+            const emoji = emojiForStation(userReadableName);
             if (emoji !== null) {
                 final += `  ${emoji}`;
             }
             final += "\n";
             // Count the number of unique types of vehicles
-            let types = new Set();
+            const types = new Set();
             for (let stop of stops) {
                 types.add(stop.transportType);
             }
@@ -555,14 +554,14 @@ export class CTSService {
                 final += "\n" + CTSService.formatStops(stops);
             } else {
                 // Get only the "tram" vehicles
-                let trams = stops.filter(
+                const trams = stops.filter(
                     (stop: LaneVisitsSchedule) => stop.transportType == "tram"
                 );
                 final += "\n**Trams  :tram: :**\n";
                 final += CTSService.formatStops(trams);
 
                 // Get only the "bus" vehicles
-                let buses = stops.filter(
+                const buses = stops.filter(
                     (stop: LaneVisitsSchedule) => stop.transportType == "bus"
                 );
                 final += "\n\n**Bus  :bus: :**\n";
@@ -606,10 +605,10 @@ export class CTSService {
     async getVisitsForStopCodes(
         stopCodes: string[]
     ): Promise<[string, LaneVisitsSchedule[]][]> {
-        let result: [string, LaneVisitsSchedule[]][] = [];
+        const result: [string, LaneVisitsSchedule[]][] = [];
         for (let stopCode of stopCodes) {
             try {
-                let schedule = await this.getVisitsForStopCode([stopCode]);
+                const schedule = await this.getVisitsForStopCode([stopCode]);
                 result.push([stopCode, schedule]);
             } catch (e) { }
         }
@@ -630,8 +629,8 @@ export class CTSService {
 
         if (mustNotMerge || stationsAndVisits.length <= 1) {
             results = [];
-            for (let stop of stopCodes) {
-                let maybeSchedule = stationsAndVisits.find((element) => {
+            for (const stop of stopCodes) {
+                const maybeSchedule = stationsAndVisits.find((element) => {
                     return element[0] == stop;
                 });
                 if (maybeSchedule !== undefined) {
@@ -644,7 +643,7 @@ export class CTSService {
         }
 
         // Make copy of stationsAndVisits array (we need to modify it)
-        let stationsAndVisitsCopy = stationsAndVisits.slice();
+        const stationsAndVisitsCopy = stationsAndVisits.slice();
 
         // Initialize the result array
         if (stationsAndVisits.length > 0) {
@@ -655,14 +654,14 @@ export class CTSService {
             stationsAndVisitsCopy.splice(0, 1);
         }
 
-        var existingDuplicate = false;
+        let existingDuplicate = false;
         while (stationsAndVisitsCopy.length > 0 && !existingDuplicate) {
-            let elementToMerge = stationsAndVisitsCopy[0];
-            let elementToMergeStopCode = elementToMerge[0];
-            let elementToMergeVisits = elementToMerge[1];
+            const elementToMerge = stationsAndVisitsCopy[0];
+            const elementToMergeStopCode = elementToMerge[0];
+            const elementToMergeVisits = elementToMerge[1];
             for (let i = 0; i < results.length && !existingDuplicate; i++) {
-                let result = results[i];
-                let resultVisits = result[1];
+                const result = results[i];
+                const resultVisits = result[1];
 
                 for (
                     let j = 0;
@@ -700,7 +699,7 @@ export class CTSService {
         // If there is any existing duplicate, we don't merge anything anymore
         if (existingDuplicate) {
             results = [];
-            for (let toAdd of stationsAndVisits) {
+            for (const toAdd of stationsAndVisits) {
                 results.push([[toAdd[0]], toAdd[1]]);
             }
         }
@@ -723,12 +722,12 @@ export class CTSService {
         // We query the CTS API for all the stop codes for the station
         // so we actually need to repeat the MonitoringRef query parameter
         // for each stop code.
-        let params = new URLSearchParams();
-        for (let code of stopCodes) {
+        const params = new URLSearchParams();
+        for (const code of stopCodes) {
             params.append("MonitoringRef", code);
         }
 
-        let rawResponse = await this.api.get("/stop-monitoring", {
+        const rawResponse = await this.api.get("/stop-monitoring", {
             params: params,
         });
 
@@ -739,12 +738,12 @@ export class CTSService {
                 throw new Error("CTS_PARSING_ERROR");
             },
         });
-        let response = serializer.parse(rawResponse.data);
+        const response = serializer.parse(rawResponse.data);
         if (response === undefined) {
             throw new Error("Could not parse response");
         }
 
-        let stopMonitoringDelivery =
+        const stopMonitoringDelivery =
             response.serviceDelivery.stopMonitoringDelivery;
 
         // Make sure there is exactly one element in the array
@@ -760,9 +759,9 @@ export class CTSService {
         }
 
         // An array that stores all vehicle visits for the stops we requested
-        let monitoredStopVisits = stopMonitoringDelivery[0].monitoredStopVisit;
+        const monitoredStopVisits = stopMonitoringDelivery[0].monitoredStopVisit;
 
-        let collector: {
+        const collector: {
             [key: string]: LaneVisitsSchedule;
         } = {};
 
@@ -775,7 +774,7 @@ export class CTSService {
         //
         // The CTS/SIRI API doesn't provide such as feature so we have to do it ourselves.
         monitoredStopVisits.forEach((monitoredStopVisit) => {
-            let info = monitoredStopVisit.monitoredVehicleJourney;
+            const info = monitoredStopVisit.monitoredVehicleJourney;
 
             // Get the departure time (or arrival time if there is no departure date)
             // In practice it seems there is always a departure time, but if it was
@@ -799,7 +798,7 @@ export class CTSService {
             }
 
             // The key is used to group the vehicle visits
-            let key = `${info.publishedLineName}|${info.destinationName}|${info.vehicleMode}|${info.via}`;
+            const key = `${info.publishedLineName}|${info.destinationName}|${info.vehicleMode}|${info.via}`;
 
             // If the there is already a value for this key add the departure date to the array
             if (collector[key] !== undefined) {
@@ -847,10 +846,10 @@ export class CTSService {
             return a.name.localeCompare(b.name);
         });
 
-        let vehicleStopsLists: string[] = [];
+        const vehicleStopsLists: string[] = [];
 
         // For each vehicleStop
-        for (let vehicleStop of vehicleStops) {
+        for (const vehicleStop of vehicleStops) {
             let formattedLine = `**${vehicleStop.name}: ${vehicleStop.destinationName}`;
             if (vehicleStop.via !== undefined) {
                 formattedLine += ` via ${vehicleStop.via}`;
@@ -861,10 +860,10 @@ export class CTSService {
                 return a.getTime() - b.getTime();
             });
 
-            let departureStrings: string[] = [];
+            const departureStrings: string[] = [];
 
             // For each departureDate
-            for (let departureDate of vehicleStop.departureDates) {
+            for (const departureDate of vehicleStop.departureDates) {
                 // Count the number of minutes until the departure
                 let minutes = Math.round(
                     (departureDate.getTime() - new Date().getTime()) / 1000 / 60
@@ -885,12 +884,12 @@ export class CTSService {
             vehicleStopsLists.push(formattedLine);
         }
 
-        var count = 0;
-        var result = "";
-        var lastName = "";
+        let count = 0;
+        let result = "";
+        let lastName = "";
         // We visually group the stops by line name
-        for (let vehicleStopsList of vehicleStopsLists) {
-            let currentName = vehicleStopsList.split(":")[0];
+        for (const vehicleStopsList of vehicleStopsLists) {
+            const currentName = vehicleStopsList.split(":")[0];
             if (count > 0) {
                 if (lastName == currentName) {
                     result += "\n";
@@ -913,7 +912,7 @@ export class CTSService {
     // - Remove all non-alphanumeric characters, such as spaces, dots, etc.
     // - Remove all character repetition sequences ("ll" become "l" for example)
     static normalize(stopName: string): string {
-        let lowerCaseNoAccents = stopName
+        const lowerCaseNoAccents = stopName
             .toLowerCase()
             .normalize("NFD")
             .replace(/[\u0300-\u036f]/g, "");
@@ -937,7 +936,7 @@ export class CTSService {
     async getStopCodes(
         stopName: string
     ): Promise<StationQueryResult | undefined> {
-        let maybeMatch = await this.searchStops(stopName);
+        const maybeMatch = await this.searchStops(stopName);
         if (maybeMatch === undefined) {
             return undefined;
         } else {
@@ -952,7 +951,7 @@ export class CTSService {
 
         let exactlyContained: string[] = [];
         // If we find a string that contains the station name, we add it to the array
-        for (let key of this.stopCodes.keys()) {
+        for (const key of this.stopCodes.keys()) {
             // Check if key string contains the stop name
             if (key.indexOf(stationName) !== -1) {
                 exactlyContained.push(key);
@@ -981,7 +980,7 @@ export class CTSService {
         });
 
         // If we don't, make a fuzzy search instead
-        let stationsCanonicalNames = Array.from(this.stopCodes.keys());
+        const stationsCanonicalNames = Array.from(this.stopCodes.keys());
         const fuse = new Fuse(stationsCanonicalNames, { includeScore: true });
         let fuzzyResults = fuse.search(stationName);
 
@@ -994,7 +993,7 @@ export class CTSService {
         fuzzyResults = fuzzyResults.slice(0, 25);
 
         // Map result.item to matches array
-        let fuzzyMatches = fuzzyResults.map((result) => {
+        const fuzzyMatches = fuzzyResults.map((result) => {
             return result.item;
         });
 
@@ -1014,7 +1013,7 @@ export class CTSService {
 
         // Return the value associated with the key
         return results.map((match) => {
-            let value = this.stopCodes.get(match);
+            const value = this.stopCodes.get(match);
             if (value === undefined) {
                 throw Error("Unexpected undefined value");
             }
