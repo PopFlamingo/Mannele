@@ -937,7 +937,7 @@ export class CTSService {
     async getStopCodes(
         stopName: string
     ): Promise<StationQueryResult | undefined> {
-        const maybeMatch = await this.searchStations(stopName);
+        const maybeMatch = await this.searchStation(stopName);
         if (maybeMatch === undefined) {
             return undefined;
         } else {
@@ -950,7 +950,7 @@ export class CTSService {
      * @param searchedStationName The name of the station to search for
      * @returns An array of StationQueryResult objects
      */
-    async searchStations(searchedStationName: string): Promise<StationQueryResult[]> {
+    async searchStation(searchedStationName: string): Promise<StationQueryResult[]> {
         // Normalize the stop name
         searchedStationName = CTSService.normalize(searchedStationName);
 
