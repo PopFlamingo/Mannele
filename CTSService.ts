@@ -162,11 +162,27 @@ export class NamedStation {
         this.extendedStations = [];
     }
 
-    addLogicStation(logicStation: LogicStation) {
+    /**
+     * Adds a stop to the named station.
+     * 
+     * - If no extended station exists yet, a new one containing a station with just that stop is created.
+     * - If an extended station exists:
+     *     - If a station with matching logic stop code exists, the stop is added to that station.
+     *     - If no station with the matching logic stop code exists, but the stop is close enough to an existing station, the stop is added to that station.
+     *     - If no station with the matching logic stop code exists, and the stop is not close enough to any existing station, a new extended station is created.
+     * 
+     * The reasoning behind this is explained in [this blog post](https://blog.popflamingo.fr/public-transit-bot).
+     * 
+     * @param logicStopCode The logic stop code of the stop to add
+     * @param location The location of the stop to add
+     */
+    addStop(logicStopCode: string, location: SIRILocation) {
+        this.addLogicStation(new LogicStation(logicStopCode, location))
+    }
+
+    private addLogicStation(logicStation: LogicStation) {
         // Find the closest probable extended station
-        let closestProbableExtendedStation:
-            | ProbableExtendedStation
-            | undefined = undefined;
+        let closestProbableExtendedStation: ProbableExtendedStation | undefined = undefined;
         let closestProbableExtendedStationDistance = Number.MAX_SAFE_INTEGER;
         for (const probableExtendedStation of this.extendedStations) {
             let distance = probableExtendedStation
@@ -178,8 +194,9 @@ export class NamedStation {
             }
         }
         let existingStation: LogicStation | undefined = undefined;
-        // If there is no closest probable extended station, create one
+        
         if (closestProbableExtendedStation === undefined) {
+            // If there is probable extended station yet, create one...
             closestProbableExtendedStation = new ProbableExtendedStation([
                 logicStation,
             ]);
@@ -192,6 +209,8 @@ export class NamedStation {
                         logicStation.logicStopCode
                 )) !== undefined
         ) {
+            // ...otherwise, if the closest probable extended station contains a station with the same logic stop code
+            // we add this stop to it (which effectively consists in averaging the location of the two stops)...
             let currentAverageLatSum =
                 existingStation.location.latitude * existingStation.stopCount;
             let currentAverageLonSum =
@@ -218,13 +237,15 @@ export class NamedStation {
             existingStation.stopCount += 1;
             return;
         } else if (closestProbableExtendedStationDistance > 150) {
-            // If the closest probable extended station is further away than 150 meters, create a new one
+            // ... if there was no match, but the closest probable extended station is too far away, we create a new one
+            // because we are probably facing two completely different extended stations...
             closestProbableExtendedStation = new ProbableExtendedStation([
                 logicStation,
             ]);
             this.extendedStations.push(closestProbableExtendedStation);
         } else {
-            // If the closest probable extended station is closer than 150 meters
+            // ... but if they are close enough, it means two stations with different logic stop codes
+            // are probably part of the same extended station, so we add the new station to the closest one.
             closestProbableExtendedStation.logicStations.push(logicStation);
         }
     }
@@ -309,18 +330,14 @@ export class CTSService {
                 const normalizedName = CTSService.normalize(name);
                 const logicalStopCode = stop.extension.logicalStopCode;
 
-                let value = normalizedNameToStation.get(normalizedName);
+                let namedStation = normalizedNameToStation.get(normalizedName);
                 // If the query result doesn't exist yet, create it
-                if (value === undefined) {
-                    value = new NamedStation(name, false);
-                    value.addLogicStation(
-                        new LogicStation(logicalStopCode, stop.location)
-                    );
-                    normalizedNameToStation.set(normalizedName, value);
+                if (namedStation === undefined) {
+                    namedStation = new NamedStation(name, false);
+                    namedStation.addStop(logicalStopCode, stop.location);
+                    normalizedNameToStation.set(normalizedName, namedStation);
                 } else {
-                    value.addLogicStation(
-                        new LogicStation(logicalStopCode, stop.location)
-                    );
+                    namedStation.addStop(logicalStopCode, stop.location);
                 }
             }
 
