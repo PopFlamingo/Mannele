@@ -991,8 +991,8 @@ export class CTSService {
         });
 
         // If we don't, make a fuzzy search instead
-        const stationsCanonicalNames = Array.from(this.normalizedNameToStation.keys());
-        const fuse = new Fuse(stationsCanonicalNames, { includeScore: true });
+        const normalizedNames = Array.from(this.normalizedNameToStation.keys());
+        const fuse = new Fuse(normalizedNames, { includeScore: true });
         let fuzzyResults = fuse.search(searchedStationName);
 
         // Do not include results with a too bad score
