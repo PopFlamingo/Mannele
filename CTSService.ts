@@ -294,6 +294,9 @@ export class CTSService {
                 throw new Error("CTS_PARSING_ERROR");
             }
 
+            // Iterate over all stop points and group them by their normalized name
+            // which effectively creates stations make of multiple stops
+            // See docs/stop-points-to-stations.md for more information
             for (let stop of response.stopPointsDelivery
                 .annotatedStopPointRef) {
                 const name = stop.stopName;
