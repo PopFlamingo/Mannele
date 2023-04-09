@@ -30,7 +30,7 @@ export default class CommandStationRequest implements CommandDescriptor {
             throw new Error("No station was provided");
         }
 
-        let matches = (await services.cts.searchStation(stationName)) || [];
+        let matchingStations = (await services.cts.searchStation(stationName)) || [];
 
 
         type FlattenedMatch = {
@@ -46,14 +46,14 @@ export default class CommandStationRequest implements CommandDescriptor {
         let stationsCodesToLocationInfo: Map<string, [string, SIRILocation, number]> =
             new Map();
 
-        for (let match of matches) {
-            for (let extendedStation of match.extendedStations) {
+        for (let matchingStation of matchingStations) {
+            for (let extendedStation of matchingStation.extendedStations) {
                 flattenedMatches.push({
                     logicStations: extendedStation.logicStations,
-                    stationName: match.userReadableName,
+                    stationName: matchingStation.userReadableName,
                     geoDescription:
                         extendedStation.distinctiveLocationDescription,
-                    isExactMatch: match.isExactMatch,
+                    isExactMatch: matchingStation.isExactMatch,
                 });
 
                 for (let logicStation of extendedStation.logicStations) {
