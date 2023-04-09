@@ -138,7 +138,13 @@ export class ProbableExtendedStation {
         return new SIRILocation(averageLat, averageLon);
     }
 }
-
+/**
+ * A NamedStation is one or multiple stations that have a certain name.
+ * 
+ * This probably isn't the cleanest abstraction, but the codebase has evolved that way
+ * organically in an attempt to best handle the specifities of the data source.
+ * See [this blog post](https://blog.popflamingo.fr/public-transit-bot) for more details on this.
+ */
 @jsonObject
 export class NamedStation {
     @jsonMember
