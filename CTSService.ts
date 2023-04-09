@@ -342,18 +342,18 @@ export class CTSService {
             }
 
             // Loop through all named stations
-            for (const [_, value] of normalizedNameToStation) {
+            for (const [_, namedStation] of normalizedNameToStation) {
                 // Count the total number of logical stations in the named station
                 let totalLogicalStations = 0;
-                for (const probableExtendedStation of value.extendedStations) {
+                for (const probableExtendedStation of namedStation.extendedStations) {
                     totalLogicalStations +=
                         probableExtendedStation.logicStations.length;
                 }
 
                 // If there is more than one logical station, loop through all logical stations...
                 if (totalLogicalStations > 1) {
-                    for (const probableExtendedStation of value.extendedStations) {
-                        for (const logicalStation of probableExtendedStation.logicStations) {
+                    for (const extendedStation of namedStation.extendedStations) {
+                        for (const logicalStation of extendedStation.logicStations) {
                             // ...and store their address
                             const desc = await CTSService.getReverseGeocodedAddress(
                                 geoGouvAPI,
@@ -368,10 +368,10 @@ export class CTSService {
                 // If the named stations contains more than one probable extended station
                 // in other terms if multiple stations that are far away from each other
                 // share the same name...
-                if (value.extendedStations.length > 1) {
+                if (namedStation.extendedStations.length > 1) {
                     // ...We get inverse geocoding data which includes street name, postal code and city.
                     const geoFeatures: AddressDescription[] = [];
-                    for (let extendedStation of value.extendedStations) {
+                    for (let extendedStation of namedStation.extendedStations) {
                         const addressDescription =
                             await CTSService.getReverseGeocodedAddress(
                                 geoGouvAPI,
@@ -395,8 +395,8 @@ export class CTSService {
                     }
 
                     // Use the geocoding results to create the distinctiveLocationDescription
-                    for (let i = 0; i < value.extendedStations.length; i++) {
-                        const extendedStation = value.extendedStations[i];
+                    for (let i = 0; i < namedStation.extendedStations.length; i++) {
+                        const extendedStation = namedStation.extendedStations[i];
                         const geoFeature = geoFeatures[i];
 
                         extendedStation.distinctiveLocationDescription = "";
