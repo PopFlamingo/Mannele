@@ -1,4 +1,4 @@
-import { CommandDescriptor } from "../CommandDescriptor";
+import { CommandDescriptor } from "../CommandDescriptor.js";
 import {
     ChatInputCommandInteraction,
     CacheType,
@@ -7,9 +7,9 @@ import {
     StringSelectMenuBuilder,
     ComponentType,
 } from "discord.js";
-import { BotServices } from "../BotServices";
-import { LogicStation } from "../CTSService";
-import { SIRILocation } from "../SIRITypes";
+import { BotServices } from "../BotServices.js";
+import { LogicStation } from "../CTSService.js";
+import { SIRILocation } from "../SIRITypes.js";
 
 export default class CommandStationRequest implements CommandDescriptor {
     commandName: string = "horaires";

@@ -6,7 +6,8 @@
     "scripts": {
         "build": "tsc",
         "start": "node main.ts",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "postinstall": "patch-package"
     },
     "keywords": [],
     "author": "",
@@ -23,6 +24,7 @@
         "discord.js": "^14.9.0",
         "dotenv": "^10.0.0",
         "fuse.js": "^6.4.6",
+        "patch-package": "^6.5.1",
         "reflect-metadata": "^0.1.13",
         "sunrise-sunset-js": "^2.2.1",
         "typedjson": "^1.7.0"

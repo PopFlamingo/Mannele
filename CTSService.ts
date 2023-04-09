@@ -1,8 +1,11 @@
-import axios, { AxiosInstance } from "axios";
+import { AxiosInstance } from "axios";
+import axiosModule from "axios";
+const { default: axios } = axiosModule;
 import axiosCacheAdapter from "axios-cache-adapter";
 const { setupCache } = axiosCacheAdapter;
 import fs from "fs";
-import Fuse from "fuse.js";
+import fuseModule from "fuse.js";
+const { default: Fuse } = fuseModule;
 import {
     jsonArrayMember,
     jsonMapMember,

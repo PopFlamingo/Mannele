@@ -5,8 +5,9 @@ import { CommandDescriptor, isCommandDescriptor } from "./CommandDescriptor.js";
 import { CTSService } from "./CTSService.js";
 import { readdirSync } from "fs";
 import { StatsService } from "./StatsService.js";
-import dotenv from "dotenv";
-dotenv.config();
+import { config as configDotenv } from "dotenv";
+
+configDotenv();
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
