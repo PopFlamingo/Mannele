@@ -140,7 +140,7 @@ export class ProbableExtendedStation {
 }
 
 @jsonObject
-export class StationQueryResult {
+export class NamedStation {
     @jsonMember
     userReadableName: string;
 
@@ -225,14 +225,14 @@ export class StationQueryResult {
 }
 
 @jsonObject
-class SavedQueryResults {
-    constructor(map: Map<string, StationQueryResult>, date: Date) {
-        this.map = map;
+class CachedStations {
+    constructor(map: Map<string, NamedStation>, date: Date) {
+        this.normalizedNameToStation = map;
         this.date = date;
     }
 
-    @jsonMapMember(String, StationQueryResult)
-    map: Map<string, StationQueryResult>;
+    @jsonMapMember(String, NamedStation)
+    normalizedNameToStation: Map<string, NamedStation>;
 
     @jsonMember
     date: Date;
@@ -261,18 +261,18 @@ export class CTSService {
             timeout: 8000,
         });
 
-        let queryResults = await CTSService.loadStopCodesMap(ctsAPI);
+        let normalizedNameToStation = await CTSService.loadNamedStations(ctsAPI);
 
-        return new CTSService(ctsAPI, queryResults);
+        return new CTSService(ctsAPI, normalizedNameToStation);
     }
 
-    static async loadStopCodesMap(ctsAPI: AxiosInstance): Promise<Map<string, StationQueryResult>> {
+    static async loadNamedStations(ctsAPI: AxiosInstance): Promise<Map<string, NamedStation>> {
         let geoGouvAPI = axios.create({
             baseURL: "https://api-adresse.data.gouv.fr",
             timeout: 8000,
         });
 
-        let queryResults = new Map<string, StationQueryResult>();
+        let normalizedNameToStation = new Map<string, NamedStation>();
 
         try {
             if (process.env.LOAD_STOPS_FROM_CACHE === "YES") {
@@ -303,14 +303,14 @@ export class CTSService {
                 const normalizedName = CTSService.normalize(name);
                 const logicalStopCode = stop.extension.logicalStopCode;
 
-                let value = queryResults.get(normalizedName);
+                let value = normalizedNameToStation.get(normalizedName);
                 // If the query result doesn't exist yet, create it
                 if (value === undefined) {
-                    value = new StationQueryResult(name, false);
+                    value = new NamedStation(name, false);
                     value.addLogicStation(
                         new LogicStation(logicalStopCode, stop.location)
                     );
-                    queryResults.set(normalizedName, value);
+                    normalizedNameToStation.set(normalizedName, value);
                 } else {
                     value.addLogicStation(
                         new LogicStation(logicalStopCode, stop.location)
@@ -319,7 +319,7 @@ export class CTSService {
             }
 
             // Loop through all query results with their keys and values
-            for (const [_, value] of queryResults) {
+            for (const [_, value] of normalizedNameToStation) {
                 // Count the total number of logical stations in the query result
                 let totalLogicalStations = 0;
                 for (const probableExtendedStation of value.extendedStations) {
@@ -390,8 +390,8 @@ export class CTSService {
                 }
             }
 
-            const saveData = new SavedQueryResults(queryResults, new Date());
-            const savedResultsSerializer = new TypedJSON(SavedQueryResults);
+            const saveData = new CachedStations(normalizedNameToStation, new Date());
+            const savedResultsSerializer = new TypedJSON(CachedStations);
             const savedResults = savedResultsSerializer.stringify(saveData);
             // Save to ./data/last-query-results.json
             fs.writeFileSync(
@@ -409,12 +409,12 @@ export class CTSService {
             }
 
             // Load the last query results from ./data/last-query-results.json
-            const savedResultsSerializer = new TypedJSON(SavedQueryResults);
+            const savedResultsSerializer = new TypedJSON(CachedStations);
             const savedResults = savedResultsSerializer.parse(
                 fs.readFileSync("./resources/last-query-results.json", "utf8")
             );
             if (savedResults !== undefined) {
-                queryResults = savedResults.map;
+                normalizedNameToStation = savedResults.normalizedNameToStation;
                 // Same as above but this time store full date + time using the argument of the function
                 process.env.LAST_STOP_UPDATE = CTSService.formatDateFR(savedResults.date)
 
@@ -423,7 +423,7 @@ export class CTSService {
             }
         }
 
-        return queryResults
+        return normalizedNameToStation
     }
 
     /**
@@ -491,21 +491,21 @@ export class CTSService {
 
     private constructor(
         api: AxiosInstance,
-        stopCodes: Map<string, StationQueryResult>
+        normalizedNameToStation: Map<string, NamedStation>
     ) {
         this.api = api;
-        this.stopCodes = stopCodes;
+        this.normalizedNameToStation = normalizedNameToStation;
     }
 
     private api: AxiosInstance;
     // A map of array of stop codes, where keys are
     // normalized stop names
-    private stopCodes: Map<string, StationQueryResult> = new Map();
+    private normalizedNameToStation: Map<string, NamedStation> = new Map();
 
 
     // Async function updateStopCodes()
-    async updateStopCodes() {
-        this.stopCodes = await CTSService.loadStopCodesMap(this.api);
+    async updateNormalizedNameToStation() {
+        this.normalizedNameToStation = await CTSService.loadNamedStations(this.api);
     }
 
     async getFormattedSchedule(
@@ -942,7 +942,7 @@ export class CTSService {
 
     async getStopCodes(
         stopName: string
-    ): Promise<StationQueryResult | undefined> {
+    ): Promise<NamedStation | undefined> {
         const maybeMatch = await this.searchStation(stopName);
         if (maybeMatch === undefined) {
             return undefined;
@@ -956,13 +956,13 @@ export class CTSService {
      * @param searchedStationName The name of the station to search for
      * @returns An array of StationQueryResult objects
      */
-    async searchStation(searchedStationName: string): Promise<StationQueryResult[]> {
+    async searchStation(searchedStationName: string): Promise<NamedStation[]> {
         // Normalize the stop name
         searchedStationName = CTSService.normalize(searchedStationName);
 
         let exactlyContained: string[] = [];
         // If we find a string that contains the station name, we add it to the array
-        for (const key of this.stopCodes.keys()) {
+        for (const key of this.normalizedNameToStation.keys()) {
             // Check if key string contains the stop name
             if (key.indexOf(searchedStationName) !== -1) {
                 exactlyContained.push(key);
@@ -974,7 +974,7 @@ export class CTSService {
             exactlyContained.length === 1 &&
             exactlyContained[0] === searchedStationName
         ) {
-            let result = this.stopCodes.get(exactlyContained[0]);
+            let result = this.normalizedNameToStation.get(exactlyContained[0]);
             if (result === undefined) {
                 throw new Error("SHOULD_NEVER_HAPPEN");
             }
@@ -991,7 +991,7 @@ export class CTSService {
         });
 
         // If we don't, make a fuzzy search instead
-        const stationsCanonicalNames = Array.from(this.stopCodes.keys());
+        const stationsCanonicalNames = Array.from(this.normalizedNameToStation.keys());
         const fuse = new Fuse(stationsCanonicalNames, { includeScore: true });
         let fuzzyResults = fuse.search(searchedStationName);
 
@@ -1024,7 +1024,7 @@ export class CTSService {
 
         // Return the value associated with the key
         return results.map((match) => {
-            const value = this.stopCodes.get(match);
+            const value = this.normalizedNameToStation.get(match);
             if (value === undefined) {
                 throw Error("Unexpected undefined value");
             }

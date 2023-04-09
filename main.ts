@@ -67,7 +67,7 @@ const botServices = new BotServices(
 // Update every 6 hours
 setInterval(async () => {
     try {
-        await botServices.cts.updateStopCodes()
+        await botServices.cts.updateNormalizedNameToStation()
     } catch (e) {
         console.error("Couldn't update stop codes", e)
     }
