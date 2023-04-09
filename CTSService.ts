@@ -331,7 +331,7 @@ export class CTSService {
                 const logicalStopCode = stop.extension.logicalStopCode;
 
                 let namedStation = normalizedNameToStation.get(normalizedName);
-                // If the query result doesn't exist yet, create it
+                // If the named station doesn't exist yet, create it
                 if (namedStation === undefined) {
                     namedStation = new NamedStation(name, false);
                     namedStation.addStop(logicalStopCode, stop.location);
@@ -341,9 +341,9 @@ export class CTSService {
                 }
             }
 
-            // Loop through all query results with their keys and values
+            // Loop through all named stations
             for (const [_, value] of normalizedNameToStation) {
-                // Count the total number of logical stations in the query result
+                // Count the total number of logical stations in the named station
                 let totalLogicalStations = 0;
                 for (const probableExtendedStation of value.extendedStations) {
                     totalLogicalStations +=
@@ -365,12 +365,11 @@ export class CTSService {
                     }
                 }
 
-                // If the query results contains more than one probable extended station
+                // If the named stations contains more than one probable extended station
                 // in other terms if multiple stations that are far away from each other
-                // share the same name
+                // share the same name...
                 if (value.extendedStations.length > 1) {
-                    // We query geo.gouv.fr to get inverse geocoding data
-                    // which includes street name, postal code and city.
+                    // ...We get inverse geocoding data which includes street name, postal code and city.
                     const geoFeatures: AddressDescription[] = [];
                     for (let extendedStation of value.extendedStations) {
                         const addressDescription =
