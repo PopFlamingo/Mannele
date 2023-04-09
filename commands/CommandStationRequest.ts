@@ -9,7 +9,6 @@ import {
 } from "discord.js";
 import { BotServices } from "../BotServices.js";
 import { LogicStation } from "../CTSService.js";
-import { SIRILocation } from "../SIRITypes.js";
 
 export default class CommandStationRequest implements CommandDescriptor {
     commandName: string = "horaires";
@@ -30,7 +29,7 @@ export default class CommandStationRequest implements CommandDescriptor {
             throw new Error("No station was provided");
         }
 
-        let matchingStations = (await services.cts.searchStation(stationName)) || [];
+        let searchResult = (await services.cts.searchStation(stationName)) || [];
 
 
         type FlattenedMatch = {
@@ -43,29 +42,16 @@ export default class CommandStationRequest implements CommandDescriptor {
         // We will now flatten the array of matches, what this means is that
         // we are going to take all extended stations and put them in a single array
         let flattenedMatches: FlattenedMatch[] = [];
-        let stationsCodesToLocationInfo: Map<string, [string, SIRILocation, number]> =
-            new Map();
 
-        for (let matchingStation of matchingStations) {
+        for (let [index, matchingStation] of searchResult.stations.entries()) {
             for (let extendedStation of matchingStation.extendedStations) {
                 flattenedMatches.push({
                     logicStations: extendedStation.logicStations,
                     stationName: matchingStation.userReadableName,
                     geoDescription:
                         extendedStation.distinctiveLocationDescription,
-                    isExactMatch: matchingStation.isExactMatch,
+                    isExactMatch: index == 0 && searchResult.firstMatchIsHighConfidence,
                 });
-
-                for (let logicStation of extendedStation.logicStations) {
-                    let geocodedAddress = logicStation.geocodedAddress;
-                    if (geocodedAddress !== undefined) {
-                        stationsCodesToLocationInfo.set(logicStation.logicStopCode, [
-                            geocodedAddress,
-                            logicStation.location,
-                            logicStation.maxDistance,
-                        ]);
-                    }
-                }
             }
         }
 
@@ -80,11 +66,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                 return station.logicStopCode;
             });
             await interaction.editReply(
-                await services.cts.getFormattedSchedule(
-                    stationRedableName,
-                    stopCodes,
-                    stationsCodesToLocationInfo
-                )
+                await services.cts.getFormattedSchedule(stationRedableName, stopCodes)
             );
         } else {
             let options = flattenedMatches.map((match, index) => {
@@ -143,7 +125,7 @@ export default class CommandStationRequest implements CommandDescriptor {
             }
 
             const collector = reply.createMessageComponentCollector({
-                componentType: ComponentType.SelectMenu,
+                componentType: ComponentType.StringSelect,
                 time: 600000,
             });
 
@@ -182,16 +164,12 @@ export default class CommandStationRequest implements CommandDescriptor {
                         readableName += ` (${station.geoDescription})`;
                     }
 
-                    let stopCodes = station.logicStations.map((station) => {
+                    let logicStopCodes = station.logicStations.map((station) => {
                         return station.logicStopCode;
                     });
 
                     await componentInteraction.editReply({
-                        content: await services.cts.getFormattedSchedule(
-                            readableName,
-                            stopCodes,
-                            stationsCodesToLocationInfo
-                        ),
+                        content: await services.cts.getFormattedSchedule(readableName, logicStopCodes),
                         components: [],
                     });
                 } catch (error) {

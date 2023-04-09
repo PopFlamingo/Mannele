@@ -4,8 +4,9 @@ const { default: axios } = axiosModule;
 import axiosCacheAdapter from "axios-cache-adapter";
 const { setupCache } = axiosCacheAdapter;
 import fs from "fs";
-import fuseModule from "fuse.js";
-const { default: Fuse } = fuseModule;
+import * as FuseModule from "fuse.js"
+const Fuse = FuseModule as any;
+
 import {
     jsonArrayMember,
     jsonMapMember,
@@ -27,6 +28,19 @@ export enum TransportType {
     tram = "tram",
     bus = "bus",
 }
+
+export type SearchResult = {
+    /** 
+     * Means the search engine is confident that the first result matches what the user is looking for
+     * without any ambiguity. This typically means that the result can be displayed directly to the user.
+     */
+    firstMatchIsHighConfidence: boolean;
+
+    /**
+     * An array of named stations that match the search query, sorted from most to least relevant.
+    */
+    stations: NamedStation[];
+};
 
 /**
  * Represents the visit times of for a lane at a station
@@ -150,15 +164,11 @@ export class NamedStation {
     @jsonMember
     userReadableName: string;
 
-    @jsonMember
-    isExactMatch: boolean;
-
     @jsonArrayMember(ProbableExtendedStation)
     extendedStations: ProbableExtendedStation[];
 
-    constructor(userReadableName: string, isExactMatch: boolean = false) {
+    constructor(userReadableName: string) {
         this.userReadableName = userReadableName;
-        this.isExactMatch = isExactMatch;
         this.extendedStations = [];
     }
 
@@ -194,7 +204,7 @@ export class NamedStation {
             }
         }
         let existingStation: LogicStation | undefined = undefined;
-        
+
         if (closestProbableExtendedStation === undefined) {
             // If there is probable extended station yet, create one...
             closestProbableExtendedStation = new ProbableExtendedStation([
@@ -288,12 +298,12 @@ export class CTSService {
             timeout: 8000,
         });
 
-        let normalizedNameToStation = await CTSService.loadNamedStations(ctsAPI);
+        let normalizedNameToStation = await CTSService.getNamedStations(ctsAPI);
 
         return new CTSService(ctsAPI, normalizedNameToStation);
     }
 
-    static async loadNamedStations(ctsAPI: AxiosInstance): Promise<Map<string, NamedStation>> {
+    static async getNamedStations(ctsAPI: AxiosInstance): Promise<Map<string, NamedStation>> {
         let geoGouvAPI = axios.create({
             baseURL: "https://api-adresse.data.gouv.fr",
             timeout: 8000,
@@ -333,7 +343,7 @@ export class CTSService {
                 let namedStation = normalizedNameToStation.get(normalizedName);
                 // If the named station doesn't exist yet, create it
                 if (namedStation === undefined) {
-                    namedStation = new NamedStation(name, false);
+                    namedStation = new NamedStation(name);
                     namedStation.addStop(logicalStopCode, stop.location);
                     normalizedNameToStation.set(normalizedName, namedStation);
                 } else {
@@ -520,23 +530,19 @@ export class CTSService {
     }
 
     private api: AxiosInstance;
-    // A map of array of stop codes, where keys are
-    // normalized stop names
+
     private normalizedNameToStation: Map<string, NamedStation> = new Map();
 
-
-    // Async function updateStopCodes()
     async updateNormalizedNameToStation() {
-        this.normalizedNameToStation = await CTSService.loadNamedStations(this.api);
+        this.normalizedNameToStation = await CTSService.getNamedStations(this.api);
     }
 
     async getFormattedSchedule(
         userReadableName: string,
-        stopCodes: string[],
-        codesAddresses: Map<string, [string, SIRILocation, number]> = new Map()
+        logicStopCodes: string[],
     ): Promise<string> {
-        let other = await this.getVisitsForStopCodes(stopCodes);
-        let merged = this.mergeVisitsIfAppropriate(other, stopCodes);
+        let other = await this.getVisitsForStopCodes(logicStopCodes);
+        let merged = CTSService.mergeVisitsIfAppropriate(other, logicStopCodes);
         // Put the stations with most lines first
         merged.sort((a, b) => {
             return b[1].length - a[1].length;
@@ -644,7 +650,7 @@ export class CTSService {
         return result;
     }
 
-    mergeVisitsIfAppropriate(
+    static mergeVisitsIfAppropriate(
         stationsAndVisits: [string, LaneVisitsSchedule[]][],
         stopCodes: string[]
     ): [string[], LaneVisitsSchedule[]][] {
@@ -969,7 +975,7 @@ export class CTSService {
         if (maybeMatch === undefined) {
             return undefined;
         } else {
-            return maybeMatch[0];
+            return maybeMatch.stations[0];
         }
     }
 
@@ -978,7 +984,7 @@ export class CTSService {
      * @param searchedStationName The name of the station to search for
      * @returns An array of StationQueryResult objects
      */
-    async searchStation(searchedStationName: string): Promise<NamedStation[]> {
+    async searchStation(searchedStationName: string): Promise<SearchResult> {
         // Normalize the stop name
         searchedStationName = CTSService.normalize(searchedStationName);
 
@@ -1000,8 +1006,7 @@ export class CTSService {
             if (result === undefined) {
                 throw new Error("SHOULD_NEVER_HAPPEN");
             }
-            result.isExactMatch = true;
-            return [result];
+            return { stations: [result], firstMatchIsHighConfidence: true };
         } else {
             // Otherwise, we only keep the first 25 elements
             exactlyContained = exactlyContained.slice(0, 25);
@@ -1011,10 +1016,10 @@ export class CTSService {
         exactlyContained.sort((a, b) => {
             return a.length - b.length;
         });
-
+        // const Fuse: Fuse.default = require("fuse.js");
         // If we don't, make a fuzzy search instead
         const normalizedNames = Array.from(this.normalizedNameToStation.keys());
-        const fuse = new Fuse(normalizedNames, { includeScore: true });
+        const fuse: FuseModule.default<string> = new Fuse(normalizedNames, { includeScore: true });
         let fuzzyResults = fuse.search(searchedStationName);
 
         // Do not include results with a too bad score
@@ -1045,12 +1050,15 @@ export class CTSService {
         results = results.slice(0, 25);
 
         // Return the value associated with the key
-        return results.map((match) => {
-            const value = this.normalizedNameToStation.get(match);
-            if (value === undefined) {
-                throw Error("Unexpected undefined value");
-            }
-            return value;
-        });
+        return {
+            stations: results.map((match) => {
+                const value = this.normalizedNameToStation.get(match);
+                if (value === undefined) {
+                    throw Error("Unexpected undefined value");
+                }
+                return value;
+            }),
+            firstMatchIsHighConfidence: false
+        };
     }
 }
