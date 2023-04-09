@@ -4,7 +4,7 @@ const { default: axios } = axiosModule;
 import axiosCacheAdapter from "axios-cache-adapter";
 const { setupCache } = axiosCacheAdapter;
 import fs from "fs";
-import * as FuseModule from "fuse.js"
+import FuseModule from "fuse.js"
 const Fuse = FuseModule as any;
 
 import {
