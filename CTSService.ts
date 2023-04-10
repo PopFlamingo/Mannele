@@ -637,8 +637,8 @@ export class CTSService {
         userReadableName: string,
         logicStopCodes: string[],
     ): Promise<string> {
-        let other = await this.getVisitsForStopCodes(logicStopCodes);
-        let merged = CTSService.mergeVisitsIfAppropriate(other, logicStopCodes);
+        let unmerged = await this.getVisitsForStopCodes(logicStopCodes);
+        let merged = CTSService.mergeVisitsIfAppropriate(unmerged);
         // Put the stations with most lines first
         merged.sort((a, b) => {
             return b[1].length - a[1].length;
@@ -751,8 +751,8 @@ export class CTSService {
 
     private static mergeVisitsIfAppropriate(
         stationsAndVisits: [string, LaneVisitsSchedule[]][],
-        stopCodes: string[]
     ): [string[], LaneVisitsSchedule[]][] {
+        const stopCodes = stationsAndVisits.map(element => element[0]);
         let results: [string[], LaneVisitsSchedule[]][] = [];
         let mustNotMerge = false;
         for (let [station, _] of stationsAndVisits) {
