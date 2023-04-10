@@ -44,6 +44,16 @@ export type SearchResult = {
     stations: NamedStation[];
 };
 
+export type SearchResultNew = {
+    /** 
+     * Means the search engine is confident that the first result matches what the user is looking for
+     * without any ambiguity. This typically means that the result can be displayed directly to the user.
+     */
+    firstMatchIsHighConfidence: boolean;
+
+    stationsAndIndices: { station: NamedStation, idx: number }[];
+};
+
 /**
  * Represents the visit times of for a lane at a station
  */
@@ -545,7 +555,69 @@ export class CTSService {
 
     private normalizedNameToStation: Map<string, NamedStation> = new Map();
 
-    private hash: string;
+    hash: string;
+
+    getExtendedStationFromPath(path: string): { name: string, value: ProbableExtendedStation, locationDescription: string | undefined } {
+        // The path is of the form normalizedNameToStationIdx/probableExtendedStationIdx|hash
+        // If the hash is not the same as the one we have, we throw an appropriate error
+        // Finally, if the path is invalid, we return undefined
+        const pathParts = path.split("|");
+        if (pathParts.length !== 2) {
+            throw new Error("INVALID_PATH_FORMAT");
+        }
+
+        const hash = pathParts[1];
+        if (hash !== this.hash) {
+            throw new Error("HASH_MISMATCH");
+        }
+
+        // Now we split the first part of the path
+        const stationAndIdx = pathParts[0].split("/");
+        if (stationAndIdx.length !== 2) {
+            throw new Error("INVALID_PATH_FORMAT");
+        }
+
+        const stationIdx = parseInt(stationAndIdx[0]);
+        const probableExtendedStationIdx = parseInt(stationAndIdx[1]);
+
+        // Check that the indexes are valid
+        if (isNaN(stationIdx) || isNaN(probableExtendedStationIdx)) {
+            throw new Error("INVALID_PATH_FORMAT");
+        }
+
+        // Now we get the station, check that the indexes are valid and return the probable extended station
+        const station = Array.from(this.normalizedNameToStation.values())[stationIdx];
+        if (station === undefined) {
+            throw new Error("INVALID_TOP_LEVEL_INDEX");
+        }
+
+        const probableExtendedStation = station.extendedStations[probableExtendedStationIdx];
+
+        if (probableExtendedStation === undefined) {
+            throw new Error("INVALID_SECOND_LEVEL_INDEX");
+        }
+
+        let locationDescription: string | undefined;
+
+        if (station.extendedStations.length > 1) {
+            locationDescription = probableExtendedStation.distinctiveLocationDescription;
+        } else {
+            locationDescription = undefined;
+        }
+
+        return { name: station.userReadableName, value: probableExtendedStation, locationDescription: locationDescription };
+    }
+
+    getStationAndIdxFromNormalizedName(normalizedName: string): { station: NamedStation, idx: number } | undefined {
+        const station = this.normalizedNameToStation.get(normalizedName);
+        if (station !== undefined) {
+            // We find the index of the station whose key is normalizedName
+            const idx = Array.from(this.normalizedNameToStation.keys()).indexOf(normalizedName);
+            return { station: station, idx: idx };
+        } else {
+            return undefined;
+        }
+    }
 
     async updateNormalizedNameToStation() {
         const stationsFetchResult = await CTSService.getNamedStations(this.api);
@@ -1001,6 +1073,19 @@ export class CTSService {
      * @returns An array of StationQueryResult objects
      */
     async searchStation(searchedStationName: string): Promise<SearchResult> {
+        const result = await this.searchStationNew(searchedStationName);
+        return {
+            stations: result.stationsAndIndices.map(stationOrPath => stationOrPath.station),
+            firstMatchIsHighConfidence: result.firstMatchIsHighConfidence,
+        }
+    }
+
+    /**
+     * 
+     * @param searchedStationName The name of the station to search for
+     * @returns An array of StationQueryResult objects
+     */
+    async searchStationNew(searchedStationName: string): Promise<SearchResultNew> {
         // Normalize the stop name
         searchedStationName = CTSService.normalize(searchedStationName);
 
@@ -1018,11 +1103,11 @@ export class CTSService {
             exactlyContained.length === 1 &&
             exactlyContained[0] === searchedStationName
         ) {
-            let result = this.normalizedNameToStation.get(exactlyContained[0]);
+            let result = this.getStationAndIdxFromNormalizedName(exactlyContained[0]);
             if (result === undefined) {
                 throw new Error("SHOULD_NEVER_HAPPEN");
             }
-            return { stations: [result], firstMatchIsHighConfidence: true };
+            return { stationsAndIndices: [result], firstMatchIsHighConfidence: true };
         } else {
             // Otherwise, we only keep the first 25 elements
             exactlyContained = exactlyContained.slice(0, 25);
@@ -1067,8 +1152,8 @@ export class CTSService {
 
         // Return the value associated with the key
         return {
-            stations: results.map((match) => {
-                const value = this.normalizedNameToStation.get(match);
+            stationsAndIndices: results.map((match) => {
+                const value = this.getStationAndIdxFromNormalizedName(match);
                 if (value === undefined) {
                     throw Error("Unexpected undefined value");
                 }

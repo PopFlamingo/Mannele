@@ -29,28 +29,28 @@ export default class CommandStationRequest implements CommandDescriptor {
             throw new Error("No station was provided");
         }
 
-        let searchResult = (await services.cts.searchStation(stationName)) || [];
-
+        let searchResult = (await services.cts.searchStationNew(stationName)) || [];
 
         type FlattenedMatch = {
             logicStations: LogicStation[];
             stationName: string;
             geoDescription: string | undefined;
             isExactMatch: boolean;
+            path: string;
         };
 
         // We will now flatten the array of matches, what this means is that
         // we are going to take all extended stations and put them in a single array
         let flattenedMatches: FlattenedMatch[] = [];
-
-        for (let [index, matchingStation] of searchResult.stations.entries()) {
-            for (let extendedStation of matchingStation.extendedStations) {
+        for (let [resultIdx, { station: matchingStation, idx: topIdx }] of searchResult.stationsAndIndices.entries()) {
+            for (let [secondIdx, extendedStation] of matchingStation.extendedStations.entries()) {
                 flattenedMatches.push({
                     logicStations: extendedStation.logicStations,
                     stationName: matchingStation.userReadableName,
                     geoDescription:
                         extendedStation.distinctiveLocationDescription,
-                    isExactMatch: index == 0 && searchResult.firstMatchIsHighConfidence,
+                    isExactMatch: resultIdx == 0 && searchResult.firstMatchIsHighConfidence,
+                    path: `${topIdx}/${secondIdx}|${services.cts.hash}`,
                 });
             }
         }
@@ -74,7 +74,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                 if (match.geoDescription !== undefined) {
                     name += ` (${match.geoDescription})`;
                 }
-                return { label: name, value: `${index}` };
+                return { label: name, value: match.path };
             });
 
             const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
@@ -149,19 +149,17 @@ export default class CommandStationRequest implements CommandDescriptor {
                         throw new Error("COMPONENT_NOT_SELECT_MENU");
                     }
 
-                    let stationParameterIdx = parseInt(
-                        componentInteraction.values[0]
-                    );
-                    let station = flattenedMatches[stationParameterIdx];
+                    let { name: readableName, value: station, locationDescription: locationDescription } =
+                        services.cts.getExtendedStationFromPath(componentInteraction.values[0]);
+
 
                     // Throw an error if the station was not found
                     if (station === undefined) {
                         throw new Error("STATION_NOT_FOUND");
                     }
-
-                    let readableName = station.stationName;
-                    if (station.geoDescription !== undefined) {
-                        readableName += ` (${station.geoDescription})`;
+                    
+                    if (locationDescription !== undefined) {
+                        readableName += ` (${locationDescription})`;
                     }
 
                     let logicStopCodes = station.logicStations.map((station) => {
