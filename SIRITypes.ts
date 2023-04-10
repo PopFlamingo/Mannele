@@ -849,7 +849,7 @@ export class AnnotatedStopPointStructure {
         stopName: string,
         extension: AnnotatedStopPointStructureExtension,
         location: SIRILocation,
-        stopPointRef?: string
+        stopPointRef: string
     ) {
         this.stopPointRef = stopPointRef;
         this.stopName = stopName;
@@ -857,8 +857,8 @@ export class AnnotatedStopPointStructure {
         this.extension = extension;
     }
 
-    @jsonMember({ name: "StopPointRef" })
-    public stopPointRef?: string;
+    @jsonMember({ name: "StopPointRef", isRequired: true })
+    public stopPointRef: string;
 
     @jsonMember({ name: "StopName", isRequired: true })
     public stopName: string;

@@ -12,6 +12,7 @@ import {
     jsonMapMember,
     jsonMember,
     jsonObject,
+    toJson,
     TypedJSON,
 } from "typedjson";
 import { FeatureCollection } from "geojson";
@@ -22,6 +23,7 @@ import {
     VehicleMode,
 } from "./SIRITypes.js";
 import { emojiForStation } from "./station_emojis.js";
+import { hash } from "./hash.js";
 
 // Create and export an enum that stores either tram or bus
 export enum TransportType {
@@ -160,6 +162,7 @@ export class ProbableExtendedStation {
  * See [this blog post](https://blog.popflamingo.fr/public-transit-bot) for more details on this.
  */
 @jsonObject
+@toJson
 export class NamedStation {
     @jsonMember
     userReadableName: string;
@@ -300,16 +303,17 @@ export class CTSService {
 
         let normalizedNameToStation = await CTSService.getNamedStations(ctsAPI);
 
-        return new CTSService(ctsAPI, normalizedNameToStation);
+        return new CTSService(ctsAPI, normalizedNameToStation.value, normalizedNameToStation.hash);
     }
 
-    static async getNamedStations(ctsAPI: AxiosInstance): Promise<Map<string, NamedStation>> {
+    static async getNamedStations(ctsAPI: AxiosInstance): Promise<{ value: Map<string, NamedStation>, hash: string }> {
         let geoGouvAPI = axios.create({
             baseURL: "https://api-adresse.data.gouv.fr",
             timeout: 8000,
         });
 
         let normalizedNameToStation = new Map<string, NamedStation>();
+        let hashValue: string;
 
         try {
             if (process.env.LOAD_STOPS_FROM_CACHE === "YES") {
@@ -331,11 +335,14 @@ export class CTSService {
                 throw new Error("CTS_PARSING_ERROR");
             }
 
+            const sortedStops = response.stopPointsDelivery.annotatedStopPointRef.sort((a, b) => {
+                return a.stopPointRef > b.stopPointRef ? 1 : -1;
+            });
+
             // Iterate over all stop points and group them by their normalized name
             // which effectively creates stations made of multiple stops
             // See docs/stop-points-to-stations.md for more information
-            for (let stop of response.stopPointsDelivery
-                .annotatedStopPointRef) {
+            for (let stop of sortedStops) {
                 const name = stop.stopName;
                 const normalizedName = CTSService.normalize(name);
                 const logicalStopCode = stop.extension.logicalStopCode;
@@ -425,6 +432,7 @@ export class CTSService {
             const saveData = new CachedStations(normalizedNameToStation, new Date());
             const savedResultsSerializer = new TypedJSON(CachedStations);
             const savedResults = savedResultsSerializer.stringify(saveData);
+            hashValue = await hash(JSON.stringify(normalizedNameToStation))
             // Save to ./data/last-query-results.json
             fs.writeFileSync(
                 "./resources/last-query-results.json",
@@ -442,11 +450,11 @@ export class CTSService {
 
             // Load the last query results from ./data/last-query-results.json
             const savedResultsSerializer = new TypedJSON(CachedStations);
-            const savedResults = savedResultsSerializer.parse(
-                fs.readFileSync("./resources/last-query-results.json", "utf8")
-            );
+            const stringValue = fs.readFileSync("./resources/last-query-results.json", "utf8");
+            const savedResults = savedResultsSerializer.parse(stringValue);
             if (savedResults !== undefined) {
                 normalizedNameToStation = savedResults.normalizedNameToStation;
+                hashValue = await hash(JSON.stringify(normalizedNameToStation))
                 // Same as above but this time store full date + time using the argument of the function
                 process.env.LAST_STOP_UPDATE = CTSService.formatDateFR(savedResults.date)
 
@@ -455,7 +463,9 @@ export class CTSService {
             }
         }
 
-        return normalizedNameToStation
+        console.log("Stations hash is " + hashValue)
+
+        return { value: normalizedNameToStation, hash: hashValue };
     }
 
     /**
@@ -523,18 +533,24 @@ export class CTSService {
 
     private constructor(
         api: AxiosInstance,
-        normalizedNameToStation: Map<string, NamedStation>
+        normalizedNameToStation: Map<string, NamedStation>,
+        hash: string
     ) {
         this.api = api;
         this.normalizedNameToStation = normalizedNameToStation;
+        this.hash = hash
     }
 
     private api: AxiosInstance;
 
     private normalizedNameToStation: Map<string, NamedStation> = new Map();
 
+    private hash: string;
+
     async updateNormalizedNameToStation() {
-        this.normalizedNameToStation = await CTSService.getNamedStations(this.api);
+        const stationsFetchResult = await CTSService.getNamedStations(this.api);
+        this.normalizedNameToStation = stationsFetchResult.value;
+        this.hash = stationsFetchResult.hash
     }
 
     async getFormattedSchedule(
