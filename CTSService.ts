@@ -54,6 +54,14 @@ export type SearchResultNew = {
     stationsAndIndices: { station: NamedStation, idx: number }[];
 };
 
+export type FlattenedMatch = {
+    logicStations: LogicStation[];
+    stationName: string;
+    geoDescription: string | undefined;
+    isExactMatch: boolean;
+    path: string;
+};
+
 /**
  * Represents the visit times of for a lane at a station
  */
@@ -1078,6 +1086,28 @@ export class CTSService {
             stations: result.stationsAndIndices.map(stationOrPath => stationOrPath.station),
             firstMatchIsHighConfidence: result.firstMatchIsHighConfidence,
         }
+    }
+
+    async searchFlattenedStation(searchedStationName: string): Promise<FlattenedMatch[]> {
+        let searchResult = (await this.searchStationNew(searchedStationName)) || [];
+
+        // We will now flatten the array of matches, what this means is that
+        // we are going to take all extended stations and put them in a single array
+        let flattenedMatches: FlattenedMatch[] = [];
+        for (let [resultIdx, { station: matchingStation, idx: topIdx }] of searchResult.stationsAndIndices.entries()) {
+            for (let [secondIdx, extendedStation] of matchingStation.extendedStations.entries()) {
+                flattenedMatches.push({
+                    logicStations: extendedStation.logicStations,
+                    stationName: matchingStation.userReadableName,
+                    geoDescription:
+                        extendedStation.distinctiveLocationDescription,
+                    isExactMatch: resultIdx == 0 && searchResult.firstMatchIsHighConfidence,
+                    path: `${topIdx}/${secondIdx}|${this.hash}`,
+                });
+            }
+        }
+
+        return flattenedMatches;
     }
 
     /**

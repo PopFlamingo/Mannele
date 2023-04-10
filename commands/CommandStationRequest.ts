@@ -8,7 +8,6 @@ import {
     ComponentType,
 } from "discord.js";
 import { BotServices } from "../BotServices.js";
-import { LogicStation } from "../CTSService.js";
 
 export default class CommandStationRequest implements CommandDescriptor {
     commandName: string = "horaires";
@@ -29,31 +28,7 @@ export default class CommandStationRequest implements CommandDescriptor {
             throw new Error("No station was provided");
         }
 
-        let searchResult = (await services.cts.searchStationNew(stationName)) || [];
-
-        type FlattenedMatch = {
-            logicStations: LogicStation[];
-            stationName: string;
-            geoDescription: string | undefined;
-            isExactMatch: boolean;
-            path: string;
-        };
-
-        // We will now flatten the array of matches, what this means is that
-        // we are going to take all extended stations and put them in a single array
-        let flattenedMatches: FlattenedMatch[] = [];
-        for (let [resultIdx, { station: matchingStation, idx: topIdx }] of searchResult.stationsAndIndices.entries()) {
-            for (let [secondIdx, extendedStation] of matchingStation.extendedStations.entries()) {
-                flattenedMatches.push({
-                    logicStations: extendedStation.logicStations,
-                    stationName: matchingStation.userReadableName,
-                    geoDescription:
-                        extendedStation.distinctiveLocationDescription,
-                    isExactMatch: resultIdx == 0 && searchResult.firstMatchIsHighConfidence,
-                    path: `${topIdx}/${secondIdx}|${services.cts.hash}`,
-                });
-            }
-        }
+        const flattenedMatches = await services.cts.searchFlattenedStation(stationName);
 
         if (flattenedMatches.length < 1) {
             throw new Error("STATION_NOT_FOUND");
