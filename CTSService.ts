@@ -653,7 +653,7 @@ export class CTSService {
         return final;
     }
 
-    async getVisitsForStopCodes(
+    private async getVisitsForStopCodes(
         stopCodes: string[]
     ): Promise<[string, LaneVisitsSchedule[]][]> {
         const result: [string, LaneVisitsSchedule[]][] = [];
