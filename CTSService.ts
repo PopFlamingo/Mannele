@@ -743,10 +743,8 @@ export class CTSService {
     ): Promise<[string, LaneVisitsSchedule[]][]> {
         const result: [string, LaneVisitsSchedule[]][] = [];
         for (let stopCode of stopCodes) {
-            try {
-                const schedule = await this.getVisitsForStopCode([stopCode]);
-                result.push([stopCode, schedule]);
-            } catch (e) { }
+            const schedule = await this.getVisitsForStopCode([stopCode]);
+            result.push([stopCode, schedule]);
         }
         return result;
     }
@@ -895,7 +893,7 @@ export class CTSService {
         }
 
         // An array that stores all vehicle visits for the stops we requested
-        const monitoredStopVisits = stopMonitoringDelivery[0].monitoredStopVisit;
+        const monitoredStopVisits = stopMonitoringDelivery[0].monitoredStopVisit || [];
 
         const collector: {
             [key: string]: LaneVisitsSchedule;
@@ -958,9 +956,6 @@ export class CTSService {
         // Remove all the lanes that have no visits
         result = result.filter((lane) => lane.departureDates.length > 0);
 
-        if (result.length === 0) {
-            throw new Error("CTS_TIME_ERROR");
-        }
         // Return all values in the collector
         return Object.values(collector);
     }

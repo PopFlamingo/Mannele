@@ -674,7 +674,7 @@ export class SpecializedStopMonitoringDelivery {
         responseTimestamp: Date,
         validUntil: Date,
         shortestPossibleCycle: number,
-        monitoredStopVisit: MonitoredStopVisit[],
+        monitoredStopVisit?: MonitoredStopVisit[],
         monitoringRef?: string[],
         version?: string
     ) {
@@ -704,11 +704,8 @@ export class SpecializedStopMonitoringDelivery {
     @jsonArrayMember(String, { name: "MonitoringRef" })
     public monitoringRef?: string[];
 
-    @jsonArrayMember(SpecializedMonitoredStopVisit, {
-        name: "MonitoredStopVisit",
-        isRequired: true,
-    })
-    public monitoredStopVisit: SpecializedMonitoredStopVisit[];
+    @jsonArrayMember(SpecializedMonitoredStopVisit, { name: "MonitoredStopVisit" })
+    public monitoredStopVisit?: SpecializedMonitoredStopVisit[];
 }
 
 @jsonObject
