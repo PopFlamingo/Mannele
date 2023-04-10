@@ -472,7 +472,7 @@ export class CTSService {
      * Format a date in the "dd/mm/yyyy à hh:mm (heure de Paris)" format
      * @param date Date to format
      */
-    static formatDateFR(date: Date): string {
+    private static formatDateFR(date: Date): string {
         const dateString = date.toLocaleDateString("fr-FR", {
             year: "numeric",
             month: "2-digit",
@@ -491,7 +491,7 @@ export class CTSService {
     }
 
 
-    static async getReverseGeocodedAddress(
+    private static async getReverseGeocodedAddress(
         axiosInstance: AxiosInstance,
         location: SIRILocation
     ): Promise<AddressDescription> {
