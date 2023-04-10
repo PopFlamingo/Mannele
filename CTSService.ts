@@ -306,7 +306,7 @@ export class CTSService {
         return new CTSService(ctsAPI, normalizedNameToStation.value, normalizedNameToStation.hash);
     }
 
-    static async getNamedStations(ctsAPI: AxiosInstance): Promise<{ value: Map<string, NamedStation>, hash: string }> {
+    private static async getNamedStations(ctsAPI: AxiosInstance): Promise<{ value: Map<string, NamedStation>, hash: string }> {
         let geoGouvAPI = axios.create({
             baseURL: "https://api-adresse.data.gouv.fr",
             timeout: 8000,
