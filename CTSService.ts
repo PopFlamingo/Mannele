@@ -733,6 +733,11 @@ export class CTSService {
         return final;
     }
 
+    /**
+     * 
+     * @param stopCodes Logic stop codes (maybe other types of codes too, todo: check)
+     * @returns An array of [stopCode, schedule] pairs
+     */
     private async getVisitsForStopCodes(
         stopCodes: string[]
     ): Promise<[string, LaneVisitsSchedule[]][]> {
