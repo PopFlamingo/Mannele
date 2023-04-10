@@ -69,7 +69,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                 await services.cts.getFormattedSchedule(stationRedableName, stopCodes)
             );
         } else {
-            let options = flattenedMatches.map((match, index) => {
+            let options = flattenedMatches.map(match => {
                 let name = match.stationName;
                 if (match.geoDescription !== undefined) {
                     name += ` (${match.geoDescription})`;
