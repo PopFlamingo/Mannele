@@ -666,7 +666,7 @@ export class CTSService {
         return result;
     }
 
-    static mergeVisitsIfAppropriate(
+    private static mergeVisitsIfAppropriate(
         stationsAndVisits: [string, LaneVisitsSchedule[]][],
         stopCodes: string[]
     ): [string[], LaneVisitsSchedule[]][] {
@@ -758,7 +758,7 @@ export class CTSService {
         return results;
     }
 
-    async getVisitsForStopCode(
+    private async getVisitsForStopCode(
         stopCodes: string[]
     ): Promise<LaneVisitsSchedule[]> {
         // Note the difference between a stop and a station:
@@ -880,7 +880,7 @@ export class CTSService {
         return Object.values(collector);
     }
 
-    static formatStops(vehicleStops: LaneVisitsSchedule[]): string {
+    private static formatStops(vehicleStops: LaneVisitsSchedule[]): string {
         if (vehicleStops.length === 0) {
             return "Il ne semble pas y avoir de passages pour le moment.";
         }
@@ -962,7 +962,7 @@ export class CTSService {
     // - Remove accents
     // - Remove all non-alphanumeric characters, such as spaces, dots, etc.
     // - Remove all character repetition sequences ("ll" become "l" for example)
-    static normalize(stopName: string): string {
+    private static normalize(stopName: string): string {
         const lowerCaseNoAccents = stopName
             .toLowerCase()
             .normalize("NFD")
