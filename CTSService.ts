@@ -752,57 +752,28 @@ export class CTSService {
     private static mergeVisitsIfAppropriate(
         stationsAndVisits: [string, LaneVisitsSchedule[]][],
     ): [string[], LaneVisitsSchedule[]][] {
-        const stopCodes = stationsAndVisits.map(element => element[0]);
-        let results: [string[], LaneVisitsSchedule[]][] = [];
-        let mustNotMerge = false;
-        for (let [station, _] of stationsAndVisits) {
-            if (stopCodes.indexOf(station) == -1) {
-                mustNotMerge = true;
-            }
-        }
+        // This is the same as input but converted to the correct shape
+        // and is useful in some cases where we don't want to actually merge anything...
+        const unmergedReshaped: [string[], LaneVisitsSchedule[]][] = stationsAndVisits.map(([station, visits]) => {
+            return [[station], visits];
+        });
 
-        if (mustNotMerge || stationsAndVisits.length <= 1) {
-            results = [];
-            for (const stop of stopCodes) {
-                const maybeSchedule = stationsAndVisits.find((element) => {
-                    return element[0] == stop;
-                });
-                if (maybeSchedule !== undefined) {
-                    results.push([[maybeSchedule[0]], maybeSchedule[1]]);
-                } else {
-                    results.push([[stop], []]);
-                }
-            }
-            return results;
+        // ... like if there is just one or no element
+        if (stationsAndVisits.length <= 1) {
+            return unmergedReshaped;
         }
 
         // Make copy of stationsAndVisits array (we need to modify it)
         const stationsAndVisitsCopy = stationsAndVisits.slice();
+        const [firstStation, firstVisits] = stationsAndVisitsCopy.shift()!;
+        let results: [string[], LaneVisitsSchedule[]][] = [[[firstStation], firstVisits]];
 
-        // Initialize the result array
-        if (stationsAndVisits.length > 0) {
-            results = [
-                [[stationsAndVisitsCopy[0][0]], stationsAndVisitsCopy[0][1]],
-            ];
-            // Remove first element from stationsAndVisitsCopy
-            stationsAndVisitsCopy.splice(0, 1);
-        }
-
-        let existingDuplicate = false;
-        while (stationsAndVisitsCopy.length > 0 && !existingDuplicate) {
-            const elementToMerge = stationsAndVisitsCopy[0];
-            const elementToMergeStopCode = elementToMerge[0];
-            const elementToMergeVisits = elementToMerge[1];
-            for (let i = 0; i < results.length && !existingDuplicate; i++) {
-                const result = results[i];
-                const resultVisits = result[1];
-
-                for (
-                    let j = 0;
-                    j < elementToMergeVisits.length && !existingDuplicate;
-                    j++
-                ) {
-                    let elementToMergeVisit = elementToMergeVisits[j];
+        while (stationsAndVisitsCopy.length > 0) {
+            const [stopCodeToMerge, visitsToMerge] = stationsAndVisitsCopy.shift()!;
+            for (let i = 0; i < results.length; i++) {
+                const [_, resultVisits] = results[i];
+                for (let j = 0; j < visitsToMerge.length; j++) {
+                    let elementToMergeVisit = visitsToMerge[j];
                     if (
                         resultVisits.findIndex((resultSchedule) => {
                             return (
@@ -816,25 +787,15 @@ export class CTSService {
                             );
                         }) != -1
                     ) {
-                        existingDuplicate = true;
+                        // If we find any element that is in both arrays, we cancel the merge.
+                        // The reason why is that this means instead of completing themselves
+                        // the stations are likely distinct even tho they are part of the same extended station
+                        // (see "Ile de France" station in [the blog post](https://blog.popflamingo.fr/public-transit-bot))
+                        return unmergedReshaped;
                     }
                 }
-
-                if (!existingDuplicate) {
-                    results[i][0].push(elementToMergeStopCode);
-                    results[i][1] = results[i][1].concat(elementToMergeVisits);
-                }
-            }
-
-            // Remove first element from stationsAndVisitsCopy
-            stationsAndVisitsCopy.splice(0, 1);
-        }
-
-        // If there is any existing duplicate, we don't merge anything anymore
-        if (existingDuplicate) {
-            results = [];
-            for (const toAdd of stationsAndVisits) {
-                results.push([[toAdd[0]], toAdd[1]]);
+                results[i][0].push(stopCodeToMerge);
+                results[i][1] = results[i][1].concat(visitsToMerge);
             }
         }
 
