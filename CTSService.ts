@@ -637,8 +637,8 @@ export class CTSService {
         userReadableName: string,
         logicStopCodes: string[],
     ): Promise<string> {
-        let unmerged = await this.getVisitsForStopCodes(logicStopCodes);
-        let merged = CTSService.mergeVisitsIfAppropriate(unmerged);
+        const unmerged = await this.getVisitsForStopCodes(logicStopCodes);
+        const merged = CTSService.mergeVisitsIfAppropriate(unmerged);
         // Put the stations with most lines first
         merged.sort((a, b) => {
             return b[1].length - a[1].length;
