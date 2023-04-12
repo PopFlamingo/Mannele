@@ -744,10 +744,10 @@ export class CTSService {
                 const all = station.getMergedLanes();
                 final += CTSService.formatLanes(all);
             } else {
-                final += "**Trams :tram:**\n";
+                final += "**Trams  :tram: :**\n";
                 final += CTSService.formatLanes(station.tramLanes);
                 final += "\n";
-                final += "**Bus :bus:**\n";
+                final += "**Bus  :bus: :**\n";
                 final += CTSService.formatLanes(station.busLanes);
 
             }
