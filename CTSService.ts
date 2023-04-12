@@ -6,6 +6,7 @@ const { setupCache } = axiosCacheAdapter;
 import fs from "fs";
 import FuseModule from "fuse.js"
 const Fuse = FuseModule as any;
+import * as ConsumableSchedule from "./ConsumableSchedule.js";
 
 import {
     jsonArrayMember,
@@ -731,6 +732,48 @@ export class CTSService {
             "*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
 
         return final;
+    }
+
+    static aggregateRawVisitSchedules(rawSchedule: LaneVisitsSchedule[]): ConsumableSchedule.Lane[] {
+        const lanes: ConsumableSchedule.Lane[] = [];
+        function add(visitSchedule: LaneVisitsSchedule) {
+            const lane = lanes.find((lane) => lane.name == visitSchedule.name);
+            const times = visitSchedule.departureDates.map((date) => new ConsumableSchedule.Visit(date));
+            const direction = new ConsumableSchedule.Direction(
+                times,
+                visitSchedule.name,
+                visitSchedule.destinationName,
+                visitSchedule.via ? visitSchedule.via : null,
+                visitSchedule.directionRef
+            );
+            if (lane === undefined) {
+                lanes.push(new ConsumableSchedule.Lane(visitSchedule.name, [direction]))
+            } else {
+                lane.directions.push(direction);
+            }
+        }
+        rawSchedule.forEach(add);
+        return lanes;
+    }
+
+    async getVisitsStore(userReadableName: string, logicStopCodes: string[]): Promise<ConsumableSchedule.NamedStationVisitsStore> {
+        const unmerged = await this.getVisitsForStopCodes(logicStopCodes);
+        const merged = CTSService.mergeVisitsIfAppropriate(unmerged);
+        merged.sort((a, b) => {
+            return b[1].length - a[1].length;
+        });
+        const stations = merged.map((station) => {
+            const isMerged = station[0].length > 1;
+            const busLanes = station[1].filter((lane) => lane.transportType == "bus");
+            const tramLanes = station[1].filter((lane) => lane.transportType == "tram");
+
+            return new ConsumableSchedule.Station(
+                isMerged,
+                CTSService.aggregateRawVisitSchedules(busLanes),
+                CTSService.aggregateRawVisitSchedules(tramLanes)
+            )
+        });
+        return new ConsumableSchedule.NamedStationVisitsStore(userReadableName, emojiForStation(userReadableName), stations);
     }
 
     /**
