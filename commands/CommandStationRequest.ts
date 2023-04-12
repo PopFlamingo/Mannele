@@ -201,6 +201,9 @@ export default class CommandStationRequest implements CommandDescriptor {
                 ".\n\n*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0))*";
 
             return text;
+        } else if (error instanceof Error && error.message === "HASH_MISMATCH") {
+            let text = "La base de données des stations a été mise à jour, merci de réessayer, le problème devrait être résolu. ";
+            return text;
         } else if (
             anyError.isAxiosError ||
             anyError.message === "CTS_PARSING_ERROR" ||
