@@ -33,7 +33,7 @@ export class Station {
         this.tramLanes = tramLanes;
     }
 
-    get mergedLanes(): Lane[] {
+    getMergedLanes(): Lane[] {
         return this.busLanes.concat(this.tramLanes);
     }
 

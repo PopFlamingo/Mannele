@@ -634,106 +634,6 @@ export class CTSService {
         this.hash = stationsFetchResult.hash
     }
 
-    async getFormattedSchedule(
-        userReadableName: string,
-        logicStopCodes: string[],
-    ): Promise<string> {
-        const unmerged = await this.getVisitsForStopCodes(logicStopCodes);
-        const merged = CTSService.mergeVisitsIfAppropriate(unmerged);
-        // Put the stations with most lines first
-        merged.sort((a, b) => {
-            return b[1].length - a[1].length;
-        });
-
-        let final = "";
-        const separateStations = merged.length > 1;
-        let multipleMerged: boolean;
-        const firstElement = merged[0];
-        if (firstElement !== undefined) {
-            let stations = firstElement[0];
-            multipleMerged = !separateStations && stations.length > 1;
-        } else {
-            multipleMerged = false;
-        }
-        if (separateStations) {
-            final += "⚠️ Avertissement: ";
-            final += `Il y a plusieurs résultats pour "${userReadableName}".\n`;
-            final += "__Voir détails plus bas.__";
-        } else if (multipleMerged) {
-            final +=
-                "⚠️ Avertissement: Les horaires de plusieurs stations portant le même nom ";
-            final += "ont étés fusionnés (voir détails plus bas).\n\n";
-        }
-
-        for (let stationsNamesAndSchedules of merged) {
-            if (separateStations) {
-                final += "\n\n=============================\n";
-            }
-            const stops = stationsNamesAndSchedules[1];
-
-            final += `__**Horaires pour *${userReadableName}***__`;
-            const emoji = emojiForStation(userReadableName);
-            if (emoji !== null) {
-                final += `  ${emoji}`;
-            }
-            final += "\n";
-            // Count the number of unique types of vehicles
-            const types = new Set();
-            for (let stop of stops) {
-                types.add(stop.transportType);
-            }
-            if (types.size <= 1) {
-                final += "\n" + CTSService.formatStops(stops);
-            } else {
-                // Get only the "tram" vehicles
-                const trams = stops.filter(
-                    (stop: LaneVisitsSchedule) => stop.transportType == "tram"
-                );
-                final += "\n**Trams  :tram: :**\n";
-                final += CTSService.formatStops(trams);
-
-                // Get only the "bus" vehicles
-                const buses = stops.filter(
-                    (stop: LaneVisitsSchedule) => stop.transportType == "bus"
-                );
-                final += "\n\n**Bus  :bus: :**\n";
-                final += CTSService.formatStops(buses);
-            }
-        }
-        if (separateStations) {
-            final += "\n\n=============================";
-            final +=
-                '\n\nLes données de la CTS définissent plusieurs "stations" pour votre requête. ';
-            final +=
-                "Cela peut avoir différentes significations selon les cas : stations se complétant entre elles, ";
-            final +=
-                "stations réellement distinctes, ou encore données tout simplement erronées.\n";
-            final +=
-                "Notez que comme toujours les différents *arrêts* faisant partie d'une même ";
-            final +=
-                "*station* peuvent être relativement éloignés les uns des autres.";
-        } else if (multipleMerged) {
-            final +=
-                '\n\nLes horaires ci-dessus correspondent à plusieurs "stations" ';
-            final += "théoriquement distinctes mais que j'ai fusionné ";
-            final +=
-                " car je considère qu'elles semblent se compléter entre elles. ";
-            final +=
-                "Notez que comme toujours les différents *arrêts* faisant partie d'une même ";
-            final +=
-                "*station* peuvent être relativement éloignés les uns des autres. ";
-            final +=
-                "**__Je peux toutefois me tromper et les données peuvent également être erronées.__**";
-        }
-
-        final +=
-            "\n\n*Certains horaires peuvent être théoriques - Some schedules may be theorical*\n";
-        final +=
-            "*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
-
-        return final;
-    }
-
     static aggregateRawVisitSchedules(rawSchedule: LaneVisitsSchedule[]): ConsumableSchedule.Lane[] {
         const lanes: ConsumableSchedule.Lane[] = [];
         function add(visitSchedule: LaneVisitsSchedule) {
@@ -753,6 +653,15 @@ export class CTSService {
             }
         }
         rawSchedule.forEach(add);
+        for (let lane of lanes) {
+            lane.directions.sort((a, b) => {
+                return b.directionTag - a.directionTag;
+            });
+
+            lane.directions.sort((a, b) => {
+                return a.name.localeCompare(b.name);
+            });
+        }
         return lanes;
     }
 
@@ -767,6 +676,14 @@ export class CTSService {
             const busLanes = station[1].filter((lane) => lane.transportType == "bus");
             const tramLanes = station[1].filter((lane) => lane.transportType == "tram");
 
+            busLanes.sort((a, b) => {
+                return a.name.localeCompare(b.name);
+            });
+
+            tramLanes.sort((a, b) => {
+                return a.name.localeCompare(b.name);
+            });
+
             return new ConsumableSchedule.Station(
                 isMerged,
                 CTSService.aggregateRawVisitSchedules(busLanes),
@@ -774,6 +691,109 @@ export class CTSService {
             )
         });
         return new ConsumableSchedule.NamedStationVisitsStore(userReadableName, emojiForStation(userReadableName), stations);
+    }
+
+    static formatLane(lane: ConsumableSchedule.Lane): string {
+        let final = "";
+        for (let direction of lane.directions) {
+            final += `> **${direction.fullLaneDescription}**: `;
+            let time: ConsumableSchedule.Visit | undefined;
+            while ((time = direction.popVisit()) !== undefined) {
+                final += `${time.formattedOffsetFR}`;
+                if (direction.peekVisit() !== undefined) {
+                    final += ", ";
+                }
+            }
+            final += "\n";
+        }
+        return final;
+    }
+
+    static formatLanes(lanes: ConsumableSchedule.Lane[]): string {
+        let final = "";
+        for (let [idx, lane] of lanes.entries()) {
+            final += CTSService.formatLane(lane);
+            if (idx < lanes.length - 1) {
+                final += "\n";
+            }
+        }
+        return final;
+    }
+
+    async getFormattedSchedule(userReadableName: string, logicStopCodes: string[]): Promise<string> {
+        const store = await this.getVisitsStore(userReadableName, logicStopCodes);
+        let final = "";
+        const multipleStations = store.length > 1;
+        if (multipleStations) {
+            final += `⚠️ Avertissement: Affichage des résultats pour ${store.length} stations potentiellement distinctes. __Voir les détails plus bas.__\n\n`;
+        }
+        final += `__**Horaires pour *${store.name}***__`;
+        if (store.emoji !== null) {
+            final += `  ${store.emoji}`;
+        }
+        final += "\n\n";
+        let station: ConsumableSchedule.Station | undefined;
+        let mergedStations = false;
+        while ((station = store.popStation()) !== undefined) {
+            if (station.isMerged) {
+                final += "⚠️ Avertissement: Plusieurs données ont été fusionnées automatiquement. __Voir les détails plus bas.__\n\n";
+                mergedStations = true;
+            }
+
+            if (station.hasSingleTypeOfLane) {
+                const all = station.getMergedLanes();
+                final += CTSService.formatLanes(all);
+            } else {
+                final += "**Trams :tram:**\n";
+                final += CTSService.formatLanes(station.tramLanes);
+                final += "\n";
+                final += "**Bus :bus:**\n";
+                final += CTSService.formatLanes(station.busLanes);
+
+            }
+            if (store.peekStation() !== undefined) {
+                final += "\n====================\n\n";
+            }
+        }
+
+        if (mergedStations || multipleStations) {
+            final += "\n====================\n\n";
+        }
+
+        if (multipleStations) {
+            final +=
+                'Les données de la CTS définissent plusieurs "stations" pour votre requête. ';
+            final +=
+                "Cela peut avoir différentes significations selon les cas : stations se complétant entre elles, ";
+            final +=
+                "stations réellement distinctes, ou encore données tout simplement erronées.\n";
+            final +=
+                "Notez que comme toujours les différents *arrêts* faisant partie d'une même ";
+            final +=
+                "*station* peuvent être relativement éloignés les uns des autres.";
+        }
+
+        if (mergedStations) {
+            if (multipleStations) {
+                final += "\n\n";
+            }
+            final +=
+                'Les horaires ci-dessus correspondent à plusieurs "stations" ';
+            final += "théoriquement distinctes mais que j'ai fusionné ";
+            final +=
+                " car je considère qu'elles semblent se compléter entre elles. ";
+            final +=
+                "Notez que comme toujours les différents *arrêts* faisant partie d'une même ";
+            final +=
+                "*station* peuvent être relativement éloignés les uns des autres. ";
+            final +=
+                "**__Je peux toutefois me tromper et les données peuvent également être erronées.__**";
+        }
+
+
+        final += "\n\n*Certains horaires peuvent être théoriques - Some schedules may be theorical*\n";
+        final += "*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
+        return final;
     }
 
     /**
@@ -964,89 +984,13 @@ export class CTSService {
         return Object.values(collector);
     }
 
-    private static formatStops(vehicleStops: LaneVisitsSchedule[]): string {
-        if (vehicleStops.length === 0) {
-            return "Il ne semble pas y avoir de passages pour le moment.";
-        }
-
-        // Sort vehicleStops by directionRef. This allows us to display the stops
-        // in the correct order both for a given line and accross lines
-        vehicleStops.sort((a, b) => {
-            return b.directionRef - a.directionRef;
-        });
-
-        // Sort vehicleStops by line name (this is a stable sort in NodeJS so we still
-        // benefit from the fact that the lines are sorted by directionRef)
-        vehicleStops.sort((a, b) => {
-            return a.name.localeCompare(b.name);
-        });
-
-        const vehicleStopsLists: string[] = [];
-
-        // For each vehicleStop
-        for (const vehicleStop of vehicleStops) {
-            let formattedLine = `**${vehicleStop.name}: ${vehicleStop.destinationName}`;
-            if (vehicleStop.via !== undefined) {
-                formattedLine += ` via ${vehicleStop.via}`;
-            }
-            formattedLine += "**: ";
-            // Sort departureDates by departure time, ascending
-            vehicleStop.departureDates.sort((a, b) => {
-                return a.getTime() - b.getTime();
-            });
-
-            const departureStrings: string[] = [];
-
-            // For each departureDate
-            for (const departureDate of vehicleStop.departureDates) {
-                // Count the number of minutes until the departure
-                let minutes = Math.round(
-                    (departureDate.getTime() - new Date().getTime()) / 1000 / 60
-                );
-                // If minutes is negative, set it to 0
-                if (minutes < 0) {
-                    minutes = 0;
-                }
-
-                if (minutes === 0) {
-                    departureStrings.push("maintenant");
-                } else if (minutes > 0) {
-                    departureStrings.push(`${minutes} min`);
-                }
-            }
-
-            formattedLine += departureStrings.join(", ");
-            vehicleStopsLists.push(formattedLine);
-        }
-
-        let count = 0;
-        let result = "";
-        let lastName = "";
-        // We visually group the stops by line name
-        for (const vehicleStopsList of vehicleStopsLists) {
-            const currentName = vehicleStopsList.split(":")[0];
-            if (count > 0) {
-                if (lastName == currentName) {
-                    result += "\n";
-                } else {
-                    result += "\n\n";
-                }
-            }
-            lastName = currentName;
-            result += "> " + vehicleStopsList;
-            count += 1;
-        }
-
-        return result;
-    }
-
     // A private static method for normalizing stop names
     // We normalize the stop name by doing the following transformations:
     // - Lowercase it
     // - Remove accents
     // - Remove all non-alphanumeric characters, such as spaces, dots, etc.
     // - Remove all character repetition sequences ("ll" become "l" for example)
-    private static normalize(stopName: string): string {
+    static normalize(stopName: string): string {
         const lowerCaseNoAccents = stopName
             .toLowerCase()
             .normalize("NFD")
