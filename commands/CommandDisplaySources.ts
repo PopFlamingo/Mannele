@@ -1,6 +1,6 @@
-import { CommandDescriptor } from "../CommandDescriptor";
+import { CommandDescriptor } from "../CommandDescriptor.js";
 import { ChatInputCommandInteraction, CacheType } from "discord.js";
-import { BotServices } from "../BotServices";
+import { BotServices } from "../BotServices.js";
 
 export default class CommandStationSchedule implements CommandDescriptor {
     commandName: string = "sources";

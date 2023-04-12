@@ -1,12 +1,13 @@
 import "reflect-metadata";
-import { Client, GatewayIntentBits, Collection, CommandInteraction, ActivityType } from "discord.js";
+import { Client, GatewayIntentBits, CommandInteraction, ActivityType } from "discord.js";
 import { BotServices } from "./BotServices.js";
 import { CommandDescriptor, isCommandDescriptor } from "./CommandDescriptor.js";
 import { CTSService } from "./CTSService.js";
 import { readdirSync } from "fs";
 import { StatsService } from "./StatsService.js";
-import dotenv from "dotenv";
-dotenv.config();
+import { config as configDotenv } from "dotenv";
+
+configDotenv();
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
@@ -66,14 +67,14 @@ const botServices = new BotServices(
 // Update every 6 hours
 setInterval(async () => {
     try {
-        await botServices.cts.updateStopCodes()
+        await botServices.cts.updateNormalizedNameToStation()
     } catch (e) {
         console.error("Couldn't update stop codes", e)
     }
 }, 1000 * 60 * 60 * 6);
 
 // Create a collection associating command (and subcommand) names with their executors
-const commands = new Collection<string, CommandDescriptor>();
+const commands = new Map<string, CommandDescriptor>();
 
 // Get the file names of all the ts files in the commands directory and remove their extension
 const commandFiles = readdirSync("./commands")

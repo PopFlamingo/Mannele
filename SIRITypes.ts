@@ -674,7 +674,7 @@ export class SpecializedStopMonitoringDelivery {
         responseTimestamp: Date,
         validUntil: Date,
         shortestPossibleCycle: number,
-        monitoredStopVisit: MonitoredStopVisit[],
+        monitoredStopVisit?: MonitoredStopVisit[],
         monitoringRef?: string[],
         version?: string
     ) {
@@ -704,11 +704,8 @@ export class SpecializedStopMonitoringDelivery {
     @jsonArrayMember(String, { name: "MonitoringRef" })
     public monitoringRef?: string[];
 
-    @jsonArrayMember(SpecializedMonitoredStopVisit, {
-        name: "MonitoredStopVisit",
-        isRequired: true,
-    })
-    public monitoredStopVisit: SpecializedMonitoredStopVisit[];
+    @jsonArrayMember(SpecializedMonitoredStopVisit, { name: "MonitoredStopVisit" })
+    public monitoredStopVisit?: SpecializedMonitoredStopVisit[];
 }
 
 @jsonObject
@@ -849,7 +846,7 @@ export class AnnotatedStopPointStructure {
         stopName: string,
         extension: AnnotatedStopPointStructureExtension,
         location: SIRILocation,
-        stopPointRef?: string
+        stopPointRef: string
     ) {
         this.stopPointRef = stopPointRef;
         this.stopName = stopName;
@@ -857,8 +854,8 @@ export class AnnotatedStopPointStructure {
         this.extension = extension;
     }
 
-    @jsonMember({ name: "StopPointRef" })
-    public stopPointRef?: string;
+    @jsonMember({ name: "StopPointRef", isRequired: true })
+    public stopPointRef: string;
 
     @jsonMember({ name: "StopName", isRequired: true })
     public stopName: string;
