@@ -740,6 +740,11 @@ export class CTSService {
                 mergedStations = true;
             }
 
+            if (!station.hasVisits) {
+                final += "Il ne semble pas y avoir de passages à cette station actuellement.\n";
+                continue;
+            }
+
             if (station.hasSingleTypeOfLane) {
                 const all = station.getMergedLanes();
                 final += CTSService.formatLanes(all);

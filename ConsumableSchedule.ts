@@ -52,6 +52,11 @@ export class Station {
     get hasSingleTypeOfLane(): boolean {
         return this.hasBusLanes !== this.hasTramLanes;
     }
+
+    get hasVisits(): boolean {
+        return this.busLanes.some(lane => lane.directions.some(direction => direction.visits.length > 0))
+            || this.tramLanes.some(lane => lane.directions.some(direction => direction.visits.length > 0));
+    }
 }
 
 export class Lane {
