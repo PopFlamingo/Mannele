@@ -7,6 +7,7 @@ import fs from "fs";
 import FuseModule from "fuse.js"
 const Fuse = FuseModule as any;
 import * as ConsumableSchedule from "./ConsumableSchedule.js";
+import { shouldDisplayMay1stCustomEmoji } from "./utilities.js";
 
 import {
     jsonArrayMember,
@@ -741,7 +742,11 @@ export class CTSService {
             }
 
             if (!station.hasVisits) {
-                final += "Il ne semble pas y avoir de passages à cette station actuellement.\n";
+                if (shouldDisplayMay1stCustomEmoji()) {
+                    final += "Il ne semble pas y avoir de passages à cette station actuellement... joyeux 1er mai ! <:lilyofthevalley:1102298141585313923>\n";
+                } else {
+                    final += "Il ne semble pas y avoir de passages à cette station actuellement.\n";
+                }
                 continue;
             }
 
