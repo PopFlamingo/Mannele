@@ -1,4 +1,5 @@
 import { getSunrise, getSunset } from "sunrise-sunset-js";
+import { shouldDisplayMay1stCustomEmoji } from "./utilities.js";
 
 // Enum with three possible values:
 // - day
@@ -90,7 +91,11 @@ export function emojiForStation(station: string): string | null {
         case "Port du Rhin":
             return "⚓️";
         case "Jean Jaures":
-            return "🌹";
+            if (shouldDisplayMay1stCustomEmoji()) {
+                return "🌹 <:lilyofthevalley:1102298141585313923>";
+            } else {
+                return "🌹";
+            }
         case "Winston Churchill":
             return "🇬🇧";
         case "Kehl Bahnhof":
@@ -128,7 +133,11 @@ export function emojiForStation(station: string): string | null {
         case "Bâle":
             return "🇨🇭";
         case "Bois Fleuri":
-            return "🌳 🌸";
+            if (shouldDisplayMay1stCustomEmoji()) {
+                return "🌳 <:lilyofthevalley:1102298141585313923>";
+            } else {
+                return "🌳 🌸";
+            }
         case "Bruxelles":
             return "🇧🇪";
         case "Bugatti":
@@ -160,11 +169,23 @@ export function emojiForStation(station: string): string | null {
         case "Imprimeurs":
             return "🖨";
         case "Jardins":
-            return "🌳 ⛲️ 🌲";
+            if (shouldDisplayMay1stCustomEmoji()) {
+                return "🌳 <:lilyofthevalley:1102298141585313923> 🌲";
+            } else {
+                return "🌳 ⛲️ 🌲";
+            }
         case "Jardiniers":
-            return "🧑‍🌾";
+            if (shouldDisplayMay1stCustomEmoji()) {
+                return "🧑‍🌾 <:lilyofthevalley:1102298141585313923>";
+            } else {
+                return "🧑‍🌾";
+            }
         case "Jardin des deux Rives":
-            return "🇫🇷 🌳 🇩🇪";
+            if (shouldDisplayMay1stCustomEmoji()) {
+                return "🇫🇷 🌳 <:lilyofthevalley:1102298141585313923> 🌳 🇩🇪";
+            } else {
+                return "🇫🇷 🌳 🇩🇪";
+            }
         case "Jean Monnet":
             return "👨‍🎨";
         case "Liberté":
