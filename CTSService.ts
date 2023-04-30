@@ -743,7 +743,7 @@ export class CTSService {
 
             if (!station.hasVisits) {
                 if (shouldDisplayMay1stCustomEmoji()) {
-                    final += "Il ne semble pas y avoir de passages à cette station actuellement... joyeux 1er mai ! <:lilyofthevalley:1102298141585313923>\n";
+                    final += "Il ne semble pas y avoir de passages à cette station actuellement... joyeux 1er mai ! <:lilyofthevalley:1102362759141785610>\n";
                 } else {
                     final += "Il ne semble pas y avoir de passages à cette station actuellement.\n";
                 }

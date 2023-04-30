@@ -92,7 +92,7 @@ export function emojiForStation(station: string): string | null {
             return "⚓️";
         case "Jean Jaures":
             if (shouldDisplayMay1stCustomEmoji()) {
-                return "🌹 <:lilyofthevalley:1102298141585313923>";
+                return "🌹 <:lilyofthevalley:1102362759141785610>";
             } else {
                 return "🌹";
             }
@@ -134,7 +134,7 @@ export function emojiForStation(station: string): string | null {
             return "🇨🇭";
         case "Bois Fleuri":
             if (shouldDisplayMay1stCustomEmoji()) {
-                return "🌳 <:lilyofthevalley:1102298141585313923>";
+                return "🌳 <:lilyofthevalley:1102362759141785610>";
             } else {
                 return "🌳 🌸";
             }
@@ -170,19 +170,19 @@ export function emojiForStation(station: string): string | null {
             return "🖨";
         case "Jardins":
             if (shouldDisplayMay1stCustomEmoji()) {
-                return "🌳 <:lilyofthevalley:1102298141585313923> 🌲";
+                return "🌳 <:lilyofthevalley:1102362759141785610> 🌲";
             } else {
                 return "🌳 ⛲️ 🌲";
             }
         case "Jardiniers":
             if (shouldDisplayMay1stCustomEmoji()) {
-                return "🧑‍🌾 <:lilyofthevalley:1102298141585313923>";
+                return "🧑‍🌾 <:lilyofthevalley:1102362759141785610>";
             } else {
                 return "🧑‍🌾";
             }
         case "Jardin des deux Rives":
             if (shouldDisplayMay1stCustomEmoji()) {
-                return "🇫🇷 🌳 <:lilyofthevalley:1102298141585313923> 🌳 🇩🇪";
+                return "🇫🇷 🌳 <:lilyofthevalley:1102362759141785610> 🌳 🇩🇪";
             } else {
                 return "🇫🇷 🌳 🇩🇪";
             }
