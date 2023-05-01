@@ -36,7 +36,7 @@ export default class CommandStationSchedule implements CommandDescriptor {
         await interaction.editReply(
             await services.cts.getFormattedSchedule(userReadableName, [
                 stopCode,
-            ])
+            ], interaction.locale.toString())
         );
     }
 
