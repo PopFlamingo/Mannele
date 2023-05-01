@@ -41,7 +41,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                 return station.logicStopCode;
             });
             await interaction.editReply(
-                await services.cts.getFormattedSchedule(stationRedableName, stopCodes)
+                await services.cts.getFormattedSchedule(stationRedableName, stopCodes, interaction.locale.toString())
             );
         } else {
             let options = flattenedMatches.map(match => {
@@ -142,7 +142,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                     });
 
                     await componentInteraction.editReply({
-                        content: await services.cts.getFormattedSchedule(readableName, logicStopCodes),
+                        content: await services.cts.getFormattedSchedule(readableName, logicStopCodes, interaction.locale.toString()),
                         components: [],
                     });
                 } catch (error) {

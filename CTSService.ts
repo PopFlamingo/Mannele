@@ -721,7 +721,7 @@ export class CTSService {
         return final;
     }
 
-    async getFormattedSchedule(userReadableName: string, logicStopCodes: string[]): Promise<string> {
+    async getFormattedSchedule(userReadableName: string, logicStopCodes: string[], locale: string | null = null): Promise<string> {
         const store = await this.getVisitsStore(userReadableName, logicStopCodes);
         let final = "";
         const multipleStations = store.length > 1;
@@ -800,9 +800,16 @@ export class CTSService {
                 "**__Je peux toutefois me tromper et les données peuvent également être erronées.__**";
         }
 
+        if (locale === "fr") {
+            final += "\n*Certains horaires peuvent être théoriques - Exactitude non garantie ([voir plus](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
+        } else if (locale === "en-US" || locale === "en-GB") {
+            final += "\n*Some schedules may be theoretical - Accuracy not guaranteed ([see more](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
+        } else {
+            final += "\n*Certains horaires peuvent être théoriques - Exactitude non garantie ([voir plus](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
+            final += "\n*Some schedules may be theoretical - Accuracy not guaranteed ([see more](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
 
-        final += "\n*Certains horaires peuvent être théoriques - Some schedules may be theorical*\n";
-        final += "*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
+        }
+
         return final;
     }
 
