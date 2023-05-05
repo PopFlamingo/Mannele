@@ -1,5 +1,5 @@
 import { getSunrise, getSunset } from "sunrise-sunset-js";
-import { shouldDisplayMay1stCustomEmoji } from "./utilities.js";
+import { customEmojisAvailable, shouldDisplayMay1stCustomEmoji } from "./utilities.js";
 
 // Enum with three possible values:
 // - day
@@ -208,6 +208,12 @@ export function emojiForStation(station: string): string | null {
             return "🛡";
         case "Krimmeri Meinau":
             return "⚽️";
+        case "Landsberg":
+            if (customEmojisAvailable()) {
+                return "<:landsberg:1103837491720634449>";
+            } else {
+                return null;
+            }
         default:
             return null;
     }

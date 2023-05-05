@@ -6,7 +6,10 @@ function getCurrentDateInTimezone(offsetInSeconds: number): Date {
 }
 
 export function shouldDisplayMay1stCustomEmoji(): boolean {
-    const emojisAvailable = process.env.MANNELE_IS_IN_EMOJI_SERVER === "true";
     const now = getCurrentDateInTimezone(7200);
-    return emojisAvailable && now.getMonth() === 4 && now.getDate() === 1;
+    return customEmojisAvailable() && now.getMonth() === 4 && now.getDate() === 1;
+}
+
+export function customEmojisAvailable(): boolean {
+    return process.env.MANNELE_IS_IN_EMOJI_SERVER === "true";
 }
