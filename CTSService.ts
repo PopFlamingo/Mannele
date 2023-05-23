@@ -909,7 +909,7 @@ export class CTSService {
         // We use a strongly typed JSON parser to parse the response
         // which eliminates a lot of boilerplate code
         const serializer = new TypedJSON(SpecializedStopMonitoringResponse, {
-            errorHandler: (error: Error) => {
+            errorHandler: (_: Error) => {
                 throw new Error("CTS_PARSING_ERROR");
             },
         });
