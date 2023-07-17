@@ -4,6 +4,7 @@ app = "mannele"
 kill_signal = "SIGINT"
 kill_timeout = 5
 processes = []
+primary_region = "cdg"
 
 [build.args]
 # We don't want to the build process to deploy the Discord commands
