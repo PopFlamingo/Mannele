@@ -6,6 +6,10 @@ import {
     ActionRowBuilder,
     StringSelectMenuBuilder,
     ComponentType,
+    ButtonBuilder,
+    ButtonStyle,
+    ModalActionRowComponentBuilder,
+    MessageActionRowComponentBuilder,
 } from "discord.js";
 import { BotServices } from "../BotServices.js";
 
@@ -40,9 +44,13 @@ export default class CommandStationRequest implements CommandDescriptor {
             let stopCodes = flattenedMatches[0].logicStations.map((station) => {
                 return station.logicStopCode;
             });
-            await interaction.editReply(
-                await services.cts.getFormattedSchedule(stationRedableName, stopCodes, interaction.locale.toString())
-            );
+            let path = flattenedMatches[0].path
+
+            await interaction.editReply({
+                content: await services.cts.getFormattedSchedule(stationRedableName, stopCodes, interaction.locale.toString()),
+                components: [this.makeRefreshButtonRow(path)],
+
+            });
         } else {
             let options = flattenedMatches.map(match => {
                 let name = match.stationName;
@@ -52,7 +60,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                 return { label: name, value: match.path };
             });
 
-            const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
+            const menuRow = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(
                 new StringSelectMenuBuilder()
                     .setCustomId("station_choice")
                     .setPlaceholder("Choix de la station")
@@ -72,7 +80,7 @@ export default class CommandStationRequest implements CommandDescriptor {
 
             let maybeMessage = await interaction.editReply({
                 content: message,
-                components: [row],
+                components: [menuRow],
             });
 
             let reply: Message | undefined;
@@ -127,7 +135,6 @@ export default class CommandStationRequest implements CommandDescriptor {
                     let { name: readableName, value: station, locationDescription: locationDescription } =
                         services.cts.getExtendedStationFromPath(componentInteraction.values[0]);
 
-
                     // Throw an error if the station was not found
                     if (station === undefined) {
                         throw new Error("STATION_NOT_FOUND");
@@ -143,7 +150,7 @@ export default class CommandStationRequest implements CommandDescriptor {
 
                     await componentInteraction.editReply({
                         content: await services.cts.getFormattedSchedule(readableName, logicStopCodes, interaction.locale.toString()),
-                        components: [],
+                        components: [this.makeRefreshButtonRow(componentInteraction.values[0])],
                     });
                 } catch (error) {
                     if (this.handleError !== undefined) {
@@ -183,6 +190,19 @@ export default class CommandStationRequest implements CommandDescriptor {
                 }
             });
         }
+    }
+
+
+    makeRefreshButtonRow(id: string): ActionRowBuilder<MessageActionRowComponentBuilder> {
+        const refreshButton = new ButtonBuilder()
+            .setCustomId(id)
+            .setLabel("Le 17/07/2023 à 21:50")
+            .setEmoji("🔄")
+            .setStyle(ButtonStyle.Secondary);
+
+        return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+            refreshButton
+        );
     }
 
     handleError?= async (

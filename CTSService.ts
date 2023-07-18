@@ -337,7 +337,7 @@ export class CTSService {
 
         try {
             if (process.env.LOAD_STOPS_FROM_CACHE === "YES") {
-                console.log("LOAD_STOPS_FROM_CACHE=\"YES\", do not use in production");
+                console.log("\x1b[31m%s\x1b[0m", "LOAD_STOPS_FROM_CACHE=\"YES\", do not use in production");
                 throw new Error("LOAD_FROM_CACHE");
             }
             let rawResponse = await ctsAPI.get("stoppoints-discovery");
