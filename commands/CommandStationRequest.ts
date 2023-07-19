@@ -10,6 +10,7 @@ import {
     ButtonStyle,
     ModalActionRowComponentBuilder,
     MessageActionRowComponentBuilder,
+    ButtonInteraction,
 } from "discord.js";
 import { BotServices } from "../BotServices.js";
 
@@ -194,9 +195,27 @@ export default class CommandStationRequest implements CommandDescriptor {
 
 
     makeRefreshButtonRow(id: string): ActionRowBuilder<MessageActionRowComponentBuilder> {
+        const optionsDate: Intl.DateTimeFormatOptions = {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        };
+
+        const optionsTime: Intl.DateTimeFormatOptions = {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        };
+
+        const dateInParis = new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris', ...optionsDate });
+        const timeInParis = new Date().toLocaleString('fr-FR', { timeZone: 'Europe/Paris', ...optionsTime });
+
+        const formattedDate = `Le ${dateInParis} à ${timeInParis}`;
+
         const refreshButton = new ButtonBuilder()
             .setCustomId(id)
-            .setLabel("Le 17/07/2023 à 21:50")
+            .setLabel(formattedDate) // TODO: Replace with a real date
             .setEmoji("🔄")
             .setStyle(ButtonStyle.Secondary);
 
@@ -204,6 +223,31 @@ export default class CommandStationRequest implements CommandDescriptor {
             refreshButton
         );
     }
+
+    handleButton?= async (
+        interaction: ButtonInteraction<CacheType>,
+        services: BotServices
+    ): Promise<void> => {
+        const path = interaction.customId
+        let { name: readableName, value: station, locationDescription: locationDescription } =
+            services.cts.getExtendedStationFromPath(path);
+        if (station === undefined) {
+            throw new Error("STATION_NOT_FOUND");
+        }
+
+        if (locationDescription !== undefined) {
+            readableName += ` (${locationDescription})`;
+        }
+
+        let logicStopCodes = station.logicStations.map((station) => {
+            return station.logicStopCode;
+        });
+
+        await interaction.editReply({
+            content: await services.cts.getFormattedSchedule(readableName, logicStopCodes, interaction.locale.toString()),
+            components: [this.makeRefreshButtonRow(path)],
+        });
+    };
 
     handleError?= async (
         error: unknown,

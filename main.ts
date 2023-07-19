@@ -105,12 +105,43 @@ async function defaultErrorHandler(
 
 // Handle slash commands
 client.on("interactionCreate", async (interaction) => {
-    if (!interaction.isChatInputCommand()) {
+    let isEphemeral =
+        ephemeralOnlyServers.indexOf(interaction.guildId || "") !== -1;
+    if (interaction.isButton()) {
+        const commandAndSubcommandName = interaction.message.interaction?.commandName
+        if (commandAndSubcommandName === undefined) {
+            return
+        }
+        // TODO: Is this the proper way to split the command name and subcommand name?
+        const split = commandAndSubcommandName.split(" ")
+        const command = split[0]
+        let subcommand: string | null = null
+        
+        if (split.length == 2) {
+            subcommand = split[1]
+        } else if (split.length > 2) {
+            console.error("Unexpected command name format")
+            return
+        }
+        const key = `${command}|${subcommand}`;
+        const commandDescriptor = commands.get(key);
+        if (commandDescriptor === undefined) {
+            console.error(`Command descriptor for ${key} not found`)
+            return
+        }
+        if (commandDescriptor.handleButton === undefined) {
+            console.error(`Command descriptor for ${key} does not have a handleButton method`)
+            return
+        }
+        await interaction.deferUpdate()
+        await commandDescriptor.handleButton(interaction, botServices)
+
+        return;
+    } else if (!interaction.isChatInputCommand()) {
+        console.log("Ignoring non command interaction");
         return;
     }
 
-    let isEphemeral =
-        ephemeralOnlyServers.indexOf(interaction.guildId || "") !== -1;
     await interaction.deferReply({ ephemeral: isEphemeral });
     let command = interaction.commandName;
     let subcommand: string | null =
