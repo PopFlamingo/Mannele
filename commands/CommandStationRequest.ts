@@ -298,7 +298,6 @@ export default class CommandStationRequest implements CommandDescriptor {
             let text = "⚠️ La base de données des stations a été mise à jour. "
             text += `Merci d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\``
             text += " pour obtenir les horaires.\n"
-            text += "Nous travaillons à des solutions pour limiter ce genre de problème à l'avenir."
             return text;
         } else {
             throw error;
