@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Client, GatewayIntentBits, CommandInteraction, ActivityType } from "discord.js";
+import { Client, GatewayIntentBits, CommandInteraction, ActivityType, ButtonInteraction, CacheType } from "discord.js";
 import { BotServices } from "./BotServices.js";
 import { CommandDescriptor, isCommandDescriptor } from "./CommandDescriptor.js";
 import { CTSService } from "./CTSService.js";
@@ -103,6 +103,20 @@ async function defaultErrorHandler(
     await interaction.editReply(errorMessage);
 }
 
+async function defaultButtonErrorHandler(
+    error: unknown,
+    interaction: ButtonInteraction<CacheType>
+) {
+    console.error(error);
+    let errorMessage = "Une erreur est survenue ! :slight_frown:\n";
+    errorMessage +=
+        "Cela peut être une erreur interne ou provenir d'un service que j'ai tenté de contacter.\n";
+    interaction.editReply({
+        content: errorMessage,
+        components: [],
+    })
+}
+
 // Handle slash commands
 client.on("interactionCreate", async (interaction) => {
     let isEphemeral =
@@ -116,7 +130,7 @@ client.on("interactionCreate", async (interaction) => {
         const split = commandAndSubcommandName.split(" ")
         const command = split[0]
         let subcommand: string | null = null
-        
+
         if (split.length == 2) {
             subcommand = split[1]
         } else if (split.length > 2) {
@@ -133,8 +147,29 @@ client.on("interactionCreate", async (interaction) => {
             console.error(`Command descriptor for ${key} does not have a handleButton method`)
             return
         }
-        await interaction.deferUpdate()
-        await commandDescriptor.handleButton(interaction, botServices)
+        await interaction.deferUpdate();
+        try {
+            await commandDescriptor.handleButton(interaction, botServices)
+        } catch (error) {
+            if (commandDescriptor.handleButtonError !== undefined) {
+                try {
+                    let customErrorMessage =
+                        await commandDescriptor.handleButtonError(
+                            error,
+                            botServices
+                        );
+                    await interaction.editReply({
+                        content: customErrorMessage,
+                        components: [],
+                    });
+                } catch (error) {
+                    await defaultButtonErrorHandler(error, interaction);
+                }
+            } else {
+                await defaultButtonErrorHandler(error, interaction);
+            }
+        }
+
 
         return;
     } else if (!interaction.isChatInputCommand()) {

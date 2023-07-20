@@ -11,6 +11,7 @@ export interface CommandDescriptor {
     ): Promise<void>;
     handleError?: (error: unknown, services: BotServices) => Promise<string>;
     handleButton?: (interaction: ButtonInteraction<CacheType>, services: BotServices) => Promise<void>;
+    handleButtonError?: (error: unknown, services: BotServices) => Promise<string>;
 }
 
 export function isCommandDescriptor(

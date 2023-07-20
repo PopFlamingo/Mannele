@@ -215,7 +215,7 @@ export default class CommandStationRequest implements CommandDescriptor {
 
         const refreshButton = new ButtonBuilder()
             .setCustomId(id)
-            .setLabel(formattedDate) // TODO: Replace with a real date
+            .setLabel(formattedDate)
             .setEmoji("🔄")
             .setStyle(ButtonStyle.Secondary);
 
@@ -284,4 +284,24 @@ export default class CommandStationRequest implements CommandDescriptor {
             throw error;
         }
     };
+
+    // Type is (error: unknown, services: BotServices) => Promise<string>;
+    handleButtonError?= async (
+        error: unknown,
+        services: BotServices
+    ): Promise<string> => {
+        if (error instanceof Error && error.message === "INVALID_PATH_FORMAT") {
+            let message = "Je ne suis pas parvenu à identifier la station liée à ce bouton. "
+            message += `Merci d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\` pour obtenir les horaires.`
+            return message
+        } else if (error instanceof Error && error.message === "HASH_MISMATCH") {
+            let text = "⚠️ La base de données des stations a été mise à jour. "
+            text += `Merci d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\``
+            text += " pour obtenir les horaires.\n"
+            text += "Nous travaillons à des solutions pour limiter ce genre de problème à l'avenir."
+            return text;
+        } else {
+            throw error;
+        }
+    }
 }
