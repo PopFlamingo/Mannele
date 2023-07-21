@@ -286,7 +286,6 @@ export default class CommandStationRequest implements CommandDescriptor {
         }
     };
 
-    // Type is (error: unknown, services: BotServices) => Promise<string>;
     handleButtonError?= async (
         error: unknown,
         services: BotServices
