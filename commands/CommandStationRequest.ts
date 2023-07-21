@@ -135,7 +135,6 @@ export default class CommandStationRequest implements CommandDescriptor {
 
                     let { name: readableName, value: station, locationDescription: locationDescription } =
                         services.cts.getExtendedStationFromPath(componentInteraction.values[0]);
-
                     // Throw an error if the station was not found
                     if (station === undefined) {
                         throw new Error("STATION_NOT_FOUND");
@@ -231,6 +230,7 @@ export default class CommandStationRequest implements CommandDescriptor {
         const path = interaction.customId
         let { name: readableName, value: station, locationDescription: locationDescription } =
             services.cts.getExtendedStationFromPath(path);
+
         if (station === undefined) {
             throw new Error("STATION_NOT_FOUND");
         }
@@ -253,6 +253,7 @@ export default class CommandStationRequest implements CommandDescriptor {
         error: unknown,
         services: BotServices
     ): Promise<string> => {
+        // TODO: Update error handling here
         let anyError = error as any;
         if (error instanceof Error && error.message === "STATION_NOT_FOUND") {
             let text = "La station demandée ne semble pas exister. ";
@@ -291,14 +292,26 @@ export default class CommandStationRequest implements CommandDescriptor {
         services: BotServices
     ): Promise<string> => {
         if (error instanceof Error && error.message === "INVALID_PATH_FORMAT") {
-            let message = "Je ne suis pas parvenu à identifier la station liée à ce bouton. "
-            message += `Merci d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\` pour obtenir les horaires.`
+            let message = "⚠️ Erreur innatendue. "
+            message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\` pour obtenir les horaires.`
             return message
-        } else if (error instanceof Error && error.message === "HASH_MISMATCH") {
-            let text = "⚠️ La base de données des stations a été mise à jour. "
-            text += `Merci d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\``
-            text += " pour obtenir les horaires.\n"
+        } else if (error instanceof Error && error.message === "NAME_NOT_FOUND") {
+            let text = "⚠️  Erreur : Je ne trouve pas de station portant de nom exact\n"
+            text += "Le nom de votre station probablement été (légèrement ?) changé dans la base de données de la CTS, ou alors elle n'existe plus.\n"
+            text += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\``
+            text += " pour chercher des stations dont le nom serait proche de la vôtre. Merci de votre compréhension.\n"
+            // TODO: Attempt to search stations that have close names and/or the same ids as the requested station to give
+            // the user suggestions
+            // TODO: Try to make the message as clear and helpful as possible, maybe suggest using map apps or the CTS website/app
             return text;
+        } else if (error instanceof Error && error.message === "NO_MATCHING_IDS") {
+            // Happens when the requested id
+            let text = "⚠️  Erreur : Évolution des données\n"
+            text += "Un changement interne à Mannele ou à la CTS nécessite que vous utilisiez à "
+            text += `nouveau la commande \`/${this.commandName} ${this.subCommandName}\` `
+            text += "pour accéder aux informations liées à votre station. Merci de votre compréhension.\n"
+            return text;
+            // TODO: Check if this message is clear enough
         } else {
             throw error;
         }

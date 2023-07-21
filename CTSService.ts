@@ -25,7 +25,6 @@ import {
     VehicleMode,
 } from "./SIRITypes.js";
 import { emojiForStation } from "./station_emojis.js";
-import { hash } from "./hash.js";
 
 // Create and export an enum that stores either tram or bus
 export enum TransportType {
@@ -187,11 +186,15 @@ export class NamedStation {
     @jsonMember
     userReadableName: string;
 
+    @jsonMember
+    normalizedName: string;
+
     @jsonArrayMember(ProbableExtendedStation)
     extendedStations: ProbableExtendedStation[];
 
-    constructor(userReadableName: string) {
+    constructor(userReadableName: string, noramalizedName: string) {
         this.userReadableName = userReadableName;
+        this.normalizedName = noramalizedName;
         this.extendedStations = [];
     }
 
@@ -323,17 +326,16 @@ export class CTSService {
 
         let normalizedNameToStation = await CTSService.getNamedStations(ctsAPI);
 
-        return new CTSService(ctsAPI, normalizedNameToStation.value, normalizedNameToStation.hash);
+        return new CTSService(ctsAPI, normalizedNameToStation);
     }
 
-    private static async getNamedStations(ctsAPI: AxiosInstance): Promise<{ value: Map<string, NamedStation>, hash: string }> {
+    private static async getNamedStations(ctsAPI: AxiosInstance): Promise<Map<string, NamedStation>> {
         let geoGouvAPI = axios.create({
             baseURL: "https://api-adresse.data.gouv.fr",
             timeout: 8000,
         });
 
         let normalizedNameToStation = new Map<string, NamedStation>();
-        let hashValue: string;
 
         try {
             if (process.env.LOAD_STOPS_FROM_CACHE === "YES") {
@@ -370,7 +372,7 @@ export class CTSService {
                 let namedStation = normalizedNameToStation.get(normalizedName);
                 // If the named station doesn't exist yet, create it
                 if (namedStation === undefined) {
-                    namedStation = new NamedStation(name);
+                    namedStation = new NamedStation(name, normalizedName);
                     namedStation.addStop(logicalStopCode, stop.location);
                     normalizedNameToStation.set(normalizedName, namedStation);
                 } else {
@@ -452,7 +454,6 @@ export class CTSService {
             const saveData = new CachedStations(normalizedNameToStation, new Date());
             const savedResultsSerializer = new TypedJSON(CachedStations);
             const savedResults = savedResultsSerializer.stringify(saveData);
-            hashValue = await hash(JSON.stringify(normalizedNameToStation))
             // Save to ./data/last-query-results.json
             fs.writeFileSync(
                 "./resources/last-query-results.json",
@@ -474,7 +475,6 @@ export class CTSService {
             const savedResults = savedResultsSerializer.parse(stringValue);
             if (savedResults !== undefined) {
                 normalizedNameToStation = savedResults.normalizedNameToStation;
-                hashValue = await hash(JSON.stringify(normalizedNameToStation))
                 // Same as above but this time store full date + time using the argument of the function
                 process.env.LAST_STOP_UPDATE = CTSService.formatDateFR(savedResults.date)
 
@@ -483,9 +483,7 @@ export class CTSService {
             }
         }
 
-        console.log("Stations hash is " + hashValue)
-
-        return { value: normalizedNameToStation, hash: hashValue };
+        return normalizedNameToStation;
     }
 
     /**
@@ -554,68 +552,54 @@ export class CTSService {
     private constructor(
         api: AxiosInstance,
         normalizedNameToStation: Map<string, NamedStation>,
-        hash: string
     ) {
         this.api = api;
         this.normalizedNameToStation = normalizedNameToStation;
-        this.hash = hash
     }
 
     private api: AxiosInstance;
 
     private normalizedNameToStation: Map<string, NamedStation> = new Map();
 
-    hash: string;
-
     getExtendedStationFromPath(path: string): { name: string, value: ProbableExtendedStation, locationDescription: string | undefined } {
-        // The path is of the form normalizedNameToStationIdx/probableExtendedStationIdx|hash
-        // If the hash is not the same as the one we have, we throw an appropriate error
-        // Finally, if the path is invalid, we return undefined
-        const pathParts = path.split("|");
-        if (pathParts.length !== 2) {
+        let normalizedNameStr: string;
+        let idsStr: string | undefined;
+        [normalizedNameStr, idsStr] = path.split("|");
+
+        if (idsStr === undefined) {
             throw new Error("INVALID_PATH_FORMAT");
         }
 
-        const hash = pathParts[1];
-        if (hash !== this.hash) {
-            throw new Error("HASH_MISMATCH");
+        const namedStation = this.normalizedNameToStation.get(normalizedNameStr);
+
+        if (namedStation === undefined) {
+            throw new Error("NAME_NOT_FOUND");
         }
 
-        // Now we split the first part of the path
-        const stationAndIdx = pathParts[0].split("/");
-        if (stationAndIdx.length !== 2) {
-            throw new Error("INVALID_PATH_FORMAT");
+        const ids = new Set(idsStr.split(",")); // TODO: Is it ok to assume that no id contains a comma?
+
+        for (let extendedStation of namedStation.extendedStations) {
+            // extendedStation.logicStations is an array of objects with a logicStopCode property
+            // Check if both arrays are equal
+            if (ids.size === extendedStation.logicStations.length &&
+                extendedStation.logicStations.every((value) => ids.has(value.logicStopCode))) {
+                let locationDescription: string | undefined;
+
+                if (namedStation.extendedStations.length > 1) {
+                    locationDescription = extendedStation.distinctiveLocationDescription;
+                } else {
+                    locationDescription = undefined;
+                }
+
+                return {
+                    name: namedStation.userReadableName,
+                    value: extendedStation,
+                    locationDescription: locationDescription
+                };
+            }
         }
 
-        const stationIdx = parseInt(stationAndIdx[0]);
-        const probableExtendedStationIdx = parseInt(stationAndIdx[1]);
-
-        // Check that the indexes are valid
-        if (isNaN(stationIdx) || isNaN(probableExtendedStationIdx)) {
-            throw new Error("INVALID_PATH_FORMAT");
-        }
-
-        // Now we get the station, check that the indexes are valid and return the probable extended station
-        const station = Array.from(this.normalizedNameToStation.values())[stationIdx];
-        if (station === undefined) {
-            throw new Error("INVALID_TOP_LEVEL_INDEX");
-        }
-
-        const probableExtendedStation = station.extendedStations[probableExtendedStationIdx];
-
-        if (probableExtendedStation === undefined) {
-            throw new Error("INVALID_SECOND_LEVEL_INDEX");
-        }
-
-        let locationDescription: string | undefined;
-
-        if (station.extendedStations.length > 1) {
-            locationDescription = probableExtendedStation.distinctiveLocationDescription;
-        } else {
-            locationDescription = undefined;
-        }
-
-        return { name: station.userReadableName, value: probableExtendedStation, locationDescription: locationDescription };
+        throw new Error("NO_MATCHING_IDS");
     }
 
     getStationAndIdxFromNormalizedName(normalizedName: string): { station: NamedStation, idx: number } | undefined {
@@ -631,8 +615,7 @@ export class CTSService {
 
     async updateNormalizedNameToStation() {
         const stationsFetchResult = await CTSService.getNamedStations(this.api);
-        this.normalizedNameToStation = stationsFetchResult.value;
-        this.hash = stationsFetchResult.hash
+        this.normalizedNameToStation = stationsFetchResult;
     }
 
     static aggregateRawVisitSchedules(rawSchedule: LaneVisitsSchedule[]): ConsumableSchedule.Lane[] {
@@ -1059,15 +1042,18 @@ export class CTSService {
         // We will now flatten the array of matches, what this means is that
         // we are going to take all extended stations and put them in a single array
         let flattenedMatches: FlattenedMatch[] = [];
-        for (let [resultIdx, { station: matchingStation, idx: topIdx }] of searchResult.stationsAndIndices.entries()) {
-            for (let [secondIdx, extendedStation] of matchingStation.extendedStations.entries()) {
+        for (let [resultIdx, { station: matchingStation, idx: _ }] of searchResult.stationsAndIndices.entries()) {
+            for (let extendedStation of matchingStation.extendedStations) {
+                let logicStopCodesStr = extendedStation.logicStations.map(
+                    (logicStation) => logicStation.logicStopCode
+                ).join(","); // TODO: Are we sure no logic stop code contains commas?
                 flattenedMatches.push({
                     logicStations: extendedStation.logicStations,
                     stationName: matchingStation.userReadableName,
                     geoDescription:
                         extendedStation.distinctiveLocationDescription,
                     isExactMatch: resultIdx == 0 && searchResult.firstMatchIsHighConfidence,
-                    path: `${topIdx}/${secondIdx}|${this.hash}`,
+                    path: `${matchingStation.normalizedName}|${logicStopCodesStr}`,
                 });
             }
         }
