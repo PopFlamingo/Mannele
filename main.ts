@@ -173,7 +173,8 @@ client.on("interactionCreate", async (interaction) => {
 
         return;
     } else if (!interaction.isChatInputCommand()) {
-        console.log("Ignoring non command interaction");
+        // It seems that even interactions that are collected using DiscordJS collectors are
+        // received here
         return;
     }
 
