@@ -292,7 +292,7 @@ export default class CommandStationRequest implements CommandDescriptor {
         services: BotServices
     ): Promise<string> => {
         if (error instanceof Error && error.message === "INVALID_PATH_FORMAT") {
-            let message = "⚠️ Erreur innatendue. "
+            let message = "⚠️  Erreur innatendue.\n"
             message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\` pour obtenir les horaires.`
             return message
         } else if (error instanceof Error && error.message === "NAME_NOT_FOUND") {
