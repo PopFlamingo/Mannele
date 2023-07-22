@@ -8,7 +8,6 @@ import {
     ComponentType,
     ButtonBuilder,
     ButtonStyle,
-    ModalActionRowComponentBuilder,
     MessageActionRowComponentBuilder,
     ButtonInteraction,
     BaseMessageOptions,
