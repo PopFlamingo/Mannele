@@ -636,6 +636,9 @@ export class CTSService {
     }
 
     static aggregateRawVisitSchedules(rawSchedule: LaneVisitsSchedule[]): ConsumableSchedule.Lane[] {
+        rawSchedule.sort((a, b) => {
+            return a.name.localeCompare(b.name);
+        });
         const lanes: ConsumableSchedule.Lane[] = [];
         function add(visitSchedule: LaneVisitsSchedule) {
             const lane = lanes.find((lane) => lane.name == visitSchedule.name);
@@ -656,11 +659,11 @@ export class CTSService {
         rawSchedule.forEach(add);
         for (let lane of lanes) {
             lane.directions.sort((a, b) => {
-                return b.directionTag - a.directionTag;
+                return a.destination.localeCompare(b.destination);
             });
 
             lane.directions.sort((a, b) => {
-                return a.name.localeCompare(b.name);
+                return b.directionTag - a.directionTag;
             });
         }
         return lanes;
@@ -676,14 +679,6 @@ export class CTSService {
             const isMerged = station[0].length > 1;
             const busLanes = station[1].filter((lane) => lane.transportType == "bus");
             const tramLanes = station[1].filter((lane) => lane.transportType == "tram");
-
-            busLanes.sort((a, b) => {
-                return a.name.localeCompare(b.name);
-            });
-
-            tramLanes.sort((a, b) => {
-                return a.name.localeCompare(b.name);
-            });
 
             return new ConsumableSchedule.Station(
                 isMerged,
