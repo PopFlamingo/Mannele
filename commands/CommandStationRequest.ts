@@ -11,6 +11,7 @@ import {
     ModalActionRowComponentBuilder,
     MessageActionRowComponentBuilder,
     ButtonInteraction,
+    BaseMessageOptions,
 } from "discord.js";
 import { BotServices } from "../BotServices.js";
 import { NameNotFoundError, PathBasedRetrievalError, PathBasedRetrievalErrorType } from "../CTSService.js";
@@ -160,10 +161,16 @@ export default class CommandStationRequest implements CommandDescriptor {
                                 error,
                                 services
                             );
-                            await componentInteraction.editReply({
-                                content: errorMessage,
-                                components: [],
-                            });
+                            if (typeof errorMessage === "string") {
+                                await componentInteraction.editReply({
+                                    content: errorMessage,
+                                    components: [],
+                                });
+                            } else {
+                                await componentInteraction.editReply(
+                                    errorMessage
+                                );
+                            }
                         } catch (error) {
                             await componentInteraction.editReply({
                                 content: "Erreur inconnue",
@@ -232,10 +239,6 @@ export default class CommandStationRequest implements CommandDescriptor {
         let { name: readableName, value: station, locationDescription: locationDescription } =
             services.cts.getExtendedStationFromPath(path);
 
-        if (station === undefined) {
-            throw new Error("STATION_NOT_FOUND");
-        }
-
         if (locationDescription !== undefined) {
             readableName += ` (${locationDescription})`;
         }
@@ -253,32 +256,21 @@ export default class CommandStationRequest implements CommandDescriptor {
     handleError?= async (
         error: unknown,
         services: BotServices
-    ): Promise<string> => {
+    ): Promise<string | BaseMessageOptions> => {
         return this.handleErrors(error, services);
     };
 
     handleButtonError?= async (
         error: unknown,
         services: BotServices
-    ): Promise<string> => {
+    ): Promise<string | BaseMessageOptions> => {
         return this.handleErrors(error, services);
     }
 
-    async handleErrors(error: unknown, services: BotServices) {
+    async handleErrors(error: unknown, services: BotServices): Promise<string | BaseMessageOptions> {
         // TODO: Update error handling here
         let anyError = error as any;
-        if (error instanceof Error && error.message === "STATION_NOT_FOUND") {
-            let text = "La station demandée ne semble pas exister. ";
-            text += "Vérifiez que vous n'ayez pas fait d'erreur dans le nom.";
-            text +=
-                "\nMa base de données des noms et références de stations a été ";
-            text += "mise à jour la dernière fois le ";
-            text += process.env.LAST_STOP_UPDATE || "[inconnu]";
-            text +=
-                ".\n\n*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0))*";
-
-            return text;
-        } else if (error instanceof PathBasedRetrievalError) {
+        if (error instanceof PathBasedRetrievalError) {
             return this.handlePathBasedRetrievalError(error);
         } else if (
             anyError.isAxiosError ||
@@ -291,9 +283,23 @@ export default class CommandStationRequest implements CommandDescriptor {
             text +=
                 "\n\n*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0))*";
             // TODO: Dynamically localize this message (try to see if others need to be dyn. localized too)
+            return {
+                content: text,
+                components: undefined // instead of [], because we keep the existing refresh button 
+            };
+        } else if (error instanceof Error && error.message === "STATION_NOT_FOUND") {
+            let text = "La station demandée ne semble pas exister. ";
+            text += "Vérifiez que vous n'ayez pas fait d'erreur dans le nom.";
+            text +=
+                "\nMa base de données des noms et références de stations a été ";
+            text += "mise à jour la dernière fois le ";
+            text += process.env.LAST_STOP_UPDATE || "[inconnu]";
+            text +=
+                ".\n\n*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0))*";
+
             return text;
         } else {
-            throw error;
+            throw error
         }
     }
 
@@ -301,16 +307,16 @@ export default class CommandStationRequest implements CommandDescriptor {
         if (error instanceof NameNotFoundError) {
             if (error.hint !== null) {
                 let message = "⚠️  Erreur : Je ne trouve pas de station portant ce nom exact\n"
-                message += `La station ${error.hint} pourrait correspondre à votre recherche mais `
+                message += `La station "${error.hint}" pourrait correspondre à votre requête mais `
                 message += "je n'en suis pas certain.\n"
                 message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\` `
-                message += "pour obtenir les horaires de cette station. Merci de votre compréhension."
+                message += "pour obtenir les horaires de la station de votre choix. Merci de votre compréhension."
                 return message;
             } else {
                 let message = "⚠️  Erreur : Je ne trouve pas de station portant ce nom exact\n"
-                message += "Le nom de votre station probablement été changé dans la base de données de la CTS, ou alors elle n'existe plus.\n"
-                message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\``
-                message += " pour chercher des stations et afficher leurs horaires. Merci de votre compréhension."
+                message += "Le nom de votre station peut être été changé dans la base de données de la CTS, ou alors elle n'existe plus.\n"
+                message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\` `
+                message += "pour obtenir les horaires de la station de votre choix. Merci de votre compréhension."
                 return message;
             }
         } else {

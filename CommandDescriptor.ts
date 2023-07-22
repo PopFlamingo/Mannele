@@ -1,5 +1,6 @@
-import { ButtonInteraction, CacheType, ChatInputCommandInteraction } from "discord.js";
+import { BaseMessageOptions, ButtonInteraction, CacheType, ChatInputCommandInteraction } from "discord.js";
 import { BotServices } from "./BotServices.js";
+
 
 // Create a TypeScript interface for the command descriptor.
 export interface CommandDescriptor {
@@ -9,9 +10,9 @@ export interface CommandDescriptor {
         interaction: ChatInputCommandInteraction<CacheType>,
         services: BotServices
     ): Promise<void>;
-    handleError?: (error: unknown, services: BotServices) => Promise<string>;
+    handleError?: (error: unknown, services: BotServices) => Promise<string | BaseMessageOptions>;
     handleButton?: (interaction: ButtonInteraction<CacheType>, services: BotServices) => Promise<void>;
-    handleButtonError?: (error: unknown, services: BotServices) => Promise<string>;
+    handleButtonError?: (error: unknown, services: BotServices) => Promise<string | BaseMessageOptions>;
 }
 
 export function isCommandDescriptor(

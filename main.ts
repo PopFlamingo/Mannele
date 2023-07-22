@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Client, GatewayIntentBits, CommandInteraction, ActivityType, ButtonInteraction, CacheType } from "discord.js";
+import { BaseMessageOptions, Client, GatewayIntentBits, CommandInteraction, ActivityType, ButtonInteraction, CacheType } from "discord.js";
 import { BotServices } from "./BotServices.js";
 import { CommandDescriptor, isCommandDescriptor } from "./CommandDescriptor.js";
 import { CTSService } from "./CTSService.js";
@@ -111,10 +111,7 @@ async function defaultButtonErrorHandler(
     let errorMessage = "Une erreur est survenue ! :slight_frown:\n";
     errorMessage +=
         "Cela peut être une erreur interne ou provenir d'un service que j'ai tenté de contacter.\n";
-    interaction.editReply({
-        content: errorMessage,
-        components: [],
-    })
+    interaction.editReply(errorMessage)
 }
 
 // Handle slash commands
@@ -158,10 +155,15 @@ client.on("interactionCreate", async (interaction) => {
                             error,
                             botServices
                         );
-                    await interaction.editReply({
-                        content: customErrorMessage,
-                        components: [],
-                    });
+                    if (typeof customErrorMessage === "string") {
+                        await interaction.editReply({
+                            content: customErrorMessage,
+                            components: [],
+                        });
+
+                    } else {
+                        await interaction.editReply(customErrorMessage);
+                    }
                 } catch (error) {
                     await defaultButtonErrorHandler(error, interaction);
                 }
