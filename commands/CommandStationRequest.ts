@@ -13,6 +13,7 @@ import {
     ButtonInteraction,
 } from "discord.js";
 import { BotServices } from "../BotServices.js";
+import { NameNotFoundError, PathBasedRetrievalError, PathBasedRetrievalErrorType } from "../CTSService.js";
 
 export default class CommandStationRequest implements CommandDescriptor {
     commandName: string = "horaires";
@@ -253,6 +254,17 @@ export default class CommandStationRequest implements CommandDescriptor {
         error: unknown,
         services: BotServices
     ): Promise<string> => {
+        return this.handleErrors(error, services);
+    };
+
+    handleButtonError?= async (
+        error: unknown,
+        services: BotServices
+    ): Promise<string> => {
+        return this.handleErrors(error, services);
+    }
+
+    async handleErrors(error: unknown, services: BotServices) {
         // TODO: Update error handling here
         let anyError = error as any;
         if (error instanceof Error && error.message === "STATION_NOT_FOUND") {
@@ -266,9 +278,8 @@ export default class CommandStationRequest implements CommandDescriptor {
                 ".\n\n*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0))*";
 
             return text;
-        } else if (error instanceof Error && error.message === "HASH_MISMATCH") {
-            let text = "La base de données des stations a été mise à jour, merci de réessayer, le problème devrait être résolu. ";
-            return text;
+        } else if (error instanceof PathBasedRetrievalError) {
+            return this.handlePathBasedRetrievalError(error);
         } else if (
             anyError.isAxiosError ||
             anyError.message === "CTS_PARSING_ERROR" ||
@@ -279,40 +290,48 @@ export default class CommandStationRequest implements CommandDescriptor {
             text += "pour le moment, ou alors simplement que les serveurs de la CTS ont un problème.";
             text +=
                 "\n\n*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0))*";
-
+            // TODO: Dynamically localize this message (try to see if others need to be dyn. localized too)
             return text;
         } else {
             throw error;
         }
-    };
+    }
 
-    handleButtonError?= async (
-        error: unknown,
-        services: BotServices
-    ): Promise<string> => {
-        if (error instanceof Error && error.message === "INVALID_PATH_FORMAT") {
-            let message = "⚠️  Erreur innatendue.\n"
-            message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\` pour obtenir les horaires.`
-            return message
-        } else if (error instanceof Error && error.message === "NAME_NOT_FOUND") {
-            let text = "⚠️  Erreur : Je ne trouve pas de station portant de nom exact\n"
-            text += "Le nom de votre station probablement été (légèrement ?) changé dans la base de données de la CTS, ou alors elle n'existe plus.\n"
-            text += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\``
-            text += " pour chercher des stations dont le nom serait proche de la vôtre. Merci de votre compréhension.\n"
-            // TODO: Attempt to search stations that have close names and/or the same ids as the requested station to give
-            // the user suggestions
-            // TODO: Try to make the message as clear and helpful as possible, maybe suggest using map apps or the CTS website/app
-            return text;
-        } else if (error instanceof Error && error.message === "NO_MATCHING_IDS") {
-            // Happens when the requested id
-            let text = "⚠️  Erreur : Évolution des données\n"
-            text += "Un changement interne à Mannele ou à la CTS nécessite que vous utilisiez à "
-            text += `nouveau la commande \`/${this.commandName} ${this.subCommandName}\` `
-            text += "pour accéder aux informations liées à votre station. Merci de votre compréhension.\n"
-            return text;
-            // TODO: Check if this message is clear enough
+    handlePathBasedRetrievalError(error: PathBasedRetrievalError): string {
+        if (error instanceof NameNotFoundError) {
+            if (error.hint !== null) {
+                let message = "⚠️  Erreur : Je ne trouve pas de station portant ce nom exact\n"
+                message += `La station ${error.hint} pourrait correspondre à votre recherche mais `
+                message += "je n'en suis pas certain.\n"
+                message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\` `
+                message += "pour obtenir les horaires de cette station. Merci de votre compréhension."
+                return message;
+            } else {
+                let message = "⚠️  Erreur : Je ne trouve pas de station portant ce nom exact\n"
+                message += "Le nom de votre station probablement été changé dans la base de données de la CTS, ou alors elle n'existe plus.\n"
+                message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\``
+                message += " pour chercher des stations et afficher leurs horaires. Merci de votre compréhension."
+                return message;
+            }
         } else {
-            throw error;
+            if (error.type === PathBasedRetrievalErrorType.INVALID_PATH_FORMAT) {
+                let message = "⚠️  Erreur innatendue.\n"
+                message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\` pour obtenir les horaires.`
+                return message
+            } else if (error.type === PathBasedRetrievalErrorType.NO_MATCHING_IDS) {
+                let message = "⚠️  Erreur : Évolution des données\n"
+                message += "Un changement interne à Mannele ou à la CTS nécessite que vous utilisiez à "
+                message += `nouveau la commande \`/${this.commandName} ${this.subCommandName}\` `
+                message += "pour accéder aux informations liées à votre station. Merci de votre compréhension.\n"
+                return message;
+            } else {
+                let message = "⚠️  Erreur inconnue\n"
+                message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${this.commandName} `
+                // TODO: What if subCommandName is undefined?
+                message += `${this.subCommandName}\` pour tenter d'obtenir des horaires.`
+
+                return message;
+            }
         }
     }
 }

@@ -475,6 +475,7 @@ export class CTSService {
             const savedResults = savedResultsSerializer.parse(stringValue);
             if (savedResults !== undefined) {
                 normalizedNameToStation = savedResults.normalizedNameToStation;
+                console.log(`Loaded ${normalizedNameToStation.size} stations from cache`);
                 // Same as above but this time store full date + time using the argument of the function
                 process.env.LAST_STOP_UPDATE = CTSService.formatDateFR(savedResults.date)
 
@@ -567,16 +568,27 @@ export class CTSService {
         [normalizedNameStr, idsStr] = path.split("|");
 
         if (idsStr === undefined) {
-            throw new Error("INVALID_PATH_FORMAT");
+            throw new PathBasedRetrievalError(
+                PathBasedRetrievalErrorType.INVALID_PATH_FORMAT,
+                `Invalid path ("${path}")`
+            )
         }
 
         const namedStation = this.normalizedNameToStation.get(normalizedNameStr);
+        const ids = new Set(idsStr.split(",")); // TODO: Is it ok to assume that no id contains a comma?
 
         if (namedStation === undefined) {
-            throw new Error("NAME_NOT_FOUND");
+            for (let namedStation of this.normalizedNameToStation.values()) {
+                for (let extendedStation of namedStation.extendedStations) {
+                    // Now check if the extended station has the same ids as the ones in the path
+                    if (ids.size === extendedStation.logicStations.length &&
+                        extendedStation.logicStations.every((value) => ids.has(value.logicStopCode))) {
+                        throw new NameNotFoundError(namedStation.userReadableName)
+                    }
+                }
+            }
+            throw new NameNotFoundError(null)
         }
-
-        const ids = new Set(idsStr.split(",")); // TODO: Is it ok to assume that no id contains a comma?
 
         for (let extendedStation of namedStation.extendedStations) {
             // extendedStation.logicStations is an array of objects with a logicStopCode property
@@ -599,7 +611,10 @@ export class CTSService {
             }
         }
 
-        throw new Error("NO_MATCHING_IDS");
+        throw new PathBasedRetrievalError(
+            PathBasedRetrievalErrorType.NO_MATCHING_IDS,
+            `No matching ids for path "${path}"`
+        )
     }
 
     getStationAndIdxFromNormalizedName(normalizedName: string): { station: NamedStation, idx: number } | undefined {
@@ -1143,4 +1158,41 @@ export class CTSService {
             firstMatchIsHighConfidence: false
         };
     }
+}
+
+
+export enum PathBasedRetrievalErrorType {
+    INVALID_PATH_FORMAT,
+    NAME_NOT_FOUND,
+    NO_MATCHING_IDS,
+}
+
+export class PathBasedRetrievalError extends Error {
+    constructor(type: PathBasedRetrievalErrorType, message: string) {
+        super(message)
+        this.type = type;
+        this.name = this.constructor.name;
+        Error.captureStackTrace && Error.captureStackTrace(this, this.constructor);
+    }
+
+    type: PathBasedRetrievalErrorType;
+}
+
+/**
+ * Represents an error that occurs when a station name cannot be found.
+ */
+export class NameNotFoundError extends PathBasedRetrievalError {
+    /**
+     * Creates a new instance of the NameNotFoundError class.
+     * @param hint A hint that indicates the name of a station that has the same ID(s) but a different name.
+     */
+    constructor(hint: string | null) {
+        super(PathBasedRetrievalErrorType.NAME_NOT_FOUND, "Couldn't find a station with the requested name");
+        this.hint = hint;
+    }
+
+    /**
+     * A hint that indicates the name of a station that has the same ID(s) but a different name.
+     */
+    hint: string | null;
 }
