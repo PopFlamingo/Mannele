@@ -15,6 +15,35 @@ import {
 import { BotServices } from "../BotServices.js";
 import { NameNotFoundError, PathBasedRetrievalError, PathBasedRetrievalErrorType } from "../CTSService.js";
 
+
+class PostStationResolveError extends Error {
+    constructor(warpedError: unknown, stationPath: string) {
+        if (warpedError instanceof Error) {
+            super(warpedError.message);
+            this.name = "PostStationResolveError";
+            this.stack = warpedError.stack;
+            this.warpedError = warpedError;
+            this.stationPath = stationPath;
+        } else {
+            super(`${warpedError}`);
+            this.name = "PostStationResolveError";
+            this.warpedError = warpedError;
+            this.stationPath = stationPath;
+        }
+    }
+
+    stationPath: string;
+    warpedError: unknown;
+}
+
+async function warpErrors<T>(stationPath: string, closure: () => T | Promise<T>): Promise<T> {
+    try {
+        return await Promise.resolve(closure());
+    } catch (error) {
+        throw new PostStationResolveError(error, stationPath);
+    }
+}
+
 export default class CommandStationRequest implements CommandDescriptor {
     commandName: string = "horaires";
     subCommandName: string = "station";
@@ -49,9 +78,15 @@ export default class CommandStationRequest implements CommandDescriptor {
             let path = flattenedMatches[0].path
 
             await interaction.editReply({
-                content: await services.cts.getFormattedSchedule(stationRedableName, stopCodes, interaction.locale.toString()),
+                content: await warpErrors(
+                    path,
+                    async () => await services.cts.getFormattedSchedule(
+                        stationRedableName,
+                        stopCodes,
+                        interaction.locale.toString()
+                    )
+                ),
                 components: [this.makeRefreshButtonRow(path)],
-
             });
         } else {
             let options = flattenedMatches.map(match => {
@@ -150,7 +185,14 @@ export default class CommandStationRequest implements CommandDescriptor {
                     });
 
                     await componentInteraction.editReply({
-                        content: await services.cts.getFormattedSchedule(readableName, logicStopCodes, interaction.locale.toString()),
+                        content: await warpErrors(
+                            componentInteraction.values[0],
+                            async () => await services.cts.getFormattedSchedule(
+                                readableName,
+                                logicStopCodes,
+                                interaction.locale.toString()
+                            )
+                        ),
                         components: [this.makeRefreshButtonRow(componentInteraction.values[0])],
                     });
                 } catch (error) {
@@ -247,7 +289,14 @@ export default class CommandStationRequest implements CommandDescriptor {
         });
 
         await interaction.editReply({
-            content: await services.cts.getFormattedSchedule(readableName, logicStopCodes, interaction.locale.toString()),
+            content: await warpErrors(
+                path,
+                async () => await services.cts.getFormattedSchedule(
+                    readableName,
+                    logicStopCodes,
+                    interaction.locale.toString()
+                )
+            ),
             components: [this.makeRefreshButtonRow(path)],
         });
     };
@@ -267,6 +316,11 @@ export default class CommandStationRequest implements CommandDescriptor {
     }
 
     async handleErrors(error: unknown, services: BotServices): Promise<string | BaseMessageOptions> {
+        let stationPath: string | undefined = undefined
+        if (error instanceof PostStationResolveError) {
+            stationPath = error.stationPath
+            error = error.warpedError
+        }
         // TODO: Update error handling here
         let anyError = error as any;
         if (error instanceof PathBasedRetrievalError) {
@@ -284,7 +338,7 @@ export default class CommandStationRequest implements CommandDescriptor {
             // TODO: Dynamically localize this message (try to see if others need to be dyn. localized too)
             return {
                 content: text,
-                components: undefined // instead of [], because we keep the existing refresh button 
+                components: stationPath === undefined ? [] : [this.makeRefreshButtonRow(stationPath)]
             };
         } else if (error instanceof Error && error.message === "STATION_NOT_FOUND") {
             let text = "La station demandée ne semble pas exister. ";
@@ -298,7 +352,20 @@ export default class CommandStationRequest implements CommandDescriptor {
 
             return text;
         } else {
-            throw error
+            if (stationPath) {
+                let errorMessage = "Une erreur est survenue ! :slight_frown:\n";
+                errorMessage +=
+                    "Cela peut être une erreur interne ou provenir d'un service que j'ai tenté de contacter.\n";
+                errorMessage += `Si le problème persiste, tentez d'utiliser à nouveau directement la commande `;
+                errorMessage += `\`/${this.commandName} ${this.subCommandName}\` pour obtenir les `;
+                errorMessage += "horaires de la station de votre choix, plutôt que le bouton de réactualisation.\n";
+                return {
+                    content: errorMessage,
+                    components: [this.makeRefreshButtonRow(stationPath)]
+                }
+            } else {
+                throw error;
+            }
         }
     }
 
@@ -334,7 +401,6 @@ export default class CommandStationRequest implements CommandDescriptor {
                 message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${this.commandName} `
                 // TODO: What if subCommandName is undefined?
                 message += `${this.subCommandName}\` pour tenter d'obtenir des horaires.`
-
                 return message;
             }
         }

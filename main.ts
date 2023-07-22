@@ -100,7 +100,10 @@ async function defaultErrorHandler(
     let errorMessage = "Une erreur est survenue ! :slight_frown:\n";
     errorMessage +=
         "Cela peut être une erreur interne ou provenir d'un service que j'ai tenté de contacter.\n";
-    await interaction.editReply(errorMessage);
+    await interaction.editReply({
+        content: errorMessage,
+        components: [],
+    });
 }
 
 async function defaultButtonErrorHandler(
@@ -111,7 +114,10 @@ async function defaultButtonErrorHandler(
     let errorMessage = "Une erreur est survenue ! :slight_frown:\n";
     errorMessage +=
         "Cela peut être une erreur interne ou provenir d'un service que j'ai tenté de contacter.\n";
-    interaction.editReply(errorMessage)
+    interaction.editReply({
+        content: errorMessage,
+        components: [],
+    })
 }
 
 // Handle slash commands
