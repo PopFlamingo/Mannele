@@ -86,7 +86,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                         interaction.locale.toString()
                     )
                 ),
-                components: [this.makeRefreshButtonRow(path)],
+                components: [CommandStationRequest.makeRefreshButtonRow(path)],
             });
         } else {
             let options = flattenedMatches.map(match => {
@@ -193,7 +193,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                                 interaction.locale.toString()
                             )
                         ),
-                        components: [this.makeRefreshButtonRow(componentInteraction.values[0])],
+                        components: [CommandStationRequest.makeRefreshButtonRow(componentInteraction.values[0])],
                     });
                 } catch (error) {
                     if (this.handleError !== undefined) {
@@ -242,7 +242,7 @@ export default class CommandStationRequest implements CommandDescriptor {
     }
 
 
-    makeRefreshButtonRow(id: string): ActionRowBuilder<MessageActionRowComponentBuilder> {
+    static makeRefreshButtonRow(id: string): ActionRowBuilder<MessageActionRowComponentBuilder> {
         const optionsDate: Intl.DateTimeFormatOptions = {
             year: 'numeric',
             month: '2-digit',
@@ -297,7 +297,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                     interaction.locale.toString()
                 )
             ),
-            components: [this.makeRefreshButtonRow(path)],
+            components: [CommandStationRequest.makeRefreshButtonRow(path)],
         });
     };
 
@@ -338,7 +338,7 @@ export default class CommandStationRequest implements CommandDescriptor {
             // TODO: Dynamically localize this message (try to see if others need to be dyn. localized too)
             return {
                 content: text,
-                components: stationPath === undefined ? [] : [this.makeRefreshButtonRow(stationPath)]
+                components: stationPath === undefined ? [] : [CommandStationRequest.makeRefreshButtonRow(stationPath)]
             };
         } else if (error instanceof Error && error.message === "STATION_NOT_FOUND") {
             let text = "La station demandée ne semble pas exister. ";
@@ -361,7 +361,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                 errorMessage += "horaires de la station de votre choix, plutôt que le bouton de réactualisation.\n";
                 return {
                     content: errorMessage,
-                    components: [this.makeRefreshButtonRow(stationPath)]
+                    components: [CommandStationRequest.makeRefreshButtonRow(stationPath)]
                 }
             } else {
                 throw error;
