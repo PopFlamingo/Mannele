@@ -46,7 +46,7 @@ async function warpErrors<T>(stationPath: string, closure: () => T | Promise<T>)
 
 export default class CommandStationRequest implements CommandDescriptor {
     commandName: string = "horaires";
-    subCommandName: string = "station";
+    subCommandName: string | null = null;
 
     async execute(
         interaction: ChatInputCommandInteraction<CacheType>,
