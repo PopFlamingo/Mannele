@@ -575,7 +575,7 @@ export class CTSService {
         }
 
         const namedStation = this.normalizedNameToStation.get(normalizedNameStr);
-        const ids = new Set(idsStr.split(",")); // TODO: Is it ok to assume that no id contains a comma?
+        const ids = new Set(idsStr.split(",").map((value) => CTSService.base64Decode(value)));
 
         if (namedStation === undefined) {
             for (let namedStation of this.normalizedNameToStation.values()) {
@@ -1046,6 +1046,16 @@ export class CTSService {
         }
     }
 
+    // Encode with no padding
+    private static base64Encode(str: string): string {
+        return Buffer.from(str).toString("base64").replace(/=/g, "");
+    }
+
+    // Decode
+    private static base64Decode(str: string): string {
+        return Buffer.from(str, "base64").toString("utf8");
+    }
+
     async searchFlattenedStation(searchedStationName: string): Promise<FlattenedMatch[]> {
         let searchResult = (await this.searchStationNew(searchedStationName)) || [];
 
@@ -1055,8 +1065,8 @@ export class CTSService {
         for (let [resultIdx, { station: matchingStation, idx: _ }] of searchResult.stationsAndIndices.entries()) {
             for (let extendedStation of matchingStation.extendedStations) {
                 let logicStopCodesStr = extendedStation.logicStations.map(
-                    (logicStation) => logicStation.logicStopCode
-                ).join(","); // TODO: Are we sure no logic stop code contains commas?
+                    (logicStation) => CTSService.base64Encode(logicStation.logicStopCode)
+                ).join(",");
                 flattenedMatches.push({
                     logicStations: extendedStation.logicStations,
                     stationName: matchingStation.userReadableName,
