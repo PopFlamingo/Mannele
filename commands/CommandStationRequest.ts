@@ -86,7 +86,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                         interaction.locale.toString()
                     )
                 ),
-                components: [CommandStationRequest.makeRefreshButtonRow(path)],
+                components: CommandStationRequest.makeMessageComponents(path),
             });
         } else {
             let options = flattenedMatches.map(match => {
@@ -193,7 +193,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                                 interaction.locale.toString()
                             )
                         ),
-                        components: [CommandStationRequest.makeRefreshButtonRow(componentInteraction.values[0])],
+                        components: CommandStationRequest.makeMessageComponents(componentInteraction.values[0]),
                     });
                 } catch (error) {
                     if (this.handleError !== undefined) {
@@ -241,8 +241,13 @@ export default class CommandStationRequest implements CommandDescriptor {
         }
     }
 
-
-    static makeRefreshButtonRow(id: string): ActionRowBuilder<MessageActionRowComponentBuilder> {
+    static makeMessageComponents(id: string): ActionRowBuilder<MessageActionRowComponentBuilder>[] {
+        if (id.length > 100) {
+            // Very unlikely to happen as it would require CTS to make an extremely long station name
+            // and/or a station with lengthy ids some way or another
+            console.error(`[CommandStationRequest] Station path ("${id}") is too long (${id.length} > 100)`);
+            return [];
+        }
         const optionsDate: Intl.DateTimeFormatOptions = {
             year: 'numeric',
             month: '2-digit',
@@ -267,9 +272,9 @@ export default class CommandStationRequest implements CommandDescriptor {
             .setEmoji("🔄")
             .setStyle(ButtonStyle.Secondary);
 
-        return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        return [new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
             refreshButton
-        );
+        )];
     }
 
     handleButton?= async (
@@ -297,7 +302,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                     interaction.locale.toString()
                 )
             ),
-            components: [CommandStationRequest.makeRefreshButtonRow(path)],
+            components: CommandStationRequest.makeMessageComponents(path),
         });
     };
 
@@ -338,7 +343,7 @@ export default class CommandStationRequest implements CommandDescriptor {
             // TODO: Dynamically localize this message (try to see if others need to be dyn. localized too)
             return {
                 content: text,
-                components: stationPath === undefined ? [] : [CommandStationRequest.makeRefreshButtonRow(stationPath)]
+                components: stationPath === undefined ? [] : CommandStationRequest.makeMessageComponents(stationPath)
             };
         } else if (error instanceof Error && error.message === "STATION_NOT_FOUND") {
             let text = "La station demandée ne semble pas exister. ";
@@ -361,7 +366,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                 errorMessage += "horaires de la station de votre choix, plutôt que le bouton de réactualisation.\n";
                 return {
                     content: errorMessage,
-                    components: [CommandStationRequest.makeRefreshButtonRow(stationPath)]
+                    components: CommandStationRequest.makeMessageComponents(stationPath)
                 }
             } else {
                 throw error;
