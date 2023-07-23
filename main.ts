@@ -129,7 +129,6 @@ client.on("interactionCreate", async (interaction) => {
         if (commandAndSubcommandName === undefined) {
             return
         }
-        // TODO: Is this the proper way to split the command name and subcommand name?
         const split = commandAndSubcommandName.split(" ")
         const command = split[0]
         let subcommand: string | null = null

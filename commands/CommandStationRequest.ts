@@ -14,6 +14,7 @@ import {
 } from "discord.js";
 import { BotServices } from "../BotServices.js";
 import { NameNotFoundError, PathBasedRetrievalError, PathBasedRetrievalErrorType } from "../CTSService.js";
+import { fullCommandName } from "../utilities.js";
 
 
 class PostStationResolveError extends Error {
@@ -361,7 +362,7 @@ export default class CommandStationRequest implements CommandDescriptor {
                 errorMessage +=
                     "Cela peut être une erreur interne ou provenir d'un service que j'ai tenté de contacter.\n";
                 errorMessage += `Si le problème persiste, tentez d'utiliser à nouveau directement la commande `;
-                errorMessage += `\`/${this.commandName} ${this.subCommandName}\` pour obtenir les `;
+                errorMessage += `\`/${fullCommandName(this)}\` pour obtenir les `;
                 errorMessage += "horaires de la station de votre choix, plutôt que le bouton de réactualisation.\n";
                 return {
                     content: errorMessage,
@@ -379,32 +380,31 @@ export default class CommandStationRequest implements CommandDescriptor {
                 let message = "⚠️  Erreur : Je ne trouve pas de station portant ce nom exact\n"
                 message += `La station "${error.hint}" pourrait correspondre à votre requête mais `
                 message += "je n'en suis pas certain.\n"
-                message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\` `
+                message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${fullCommandName(this)}\` `
                 message += "pour obtenir les horaires de la station de votre choix. Merci de votre compréhension."
                 return message;
             } else {
                 let message = "⚠️  Erreur : Je ne trouve pas de station portant ce nom exact\n"
                 message += "Le nom de votre station peut être été changé dans la base de données de la CTS, ou alors elle n'existe plus.\n"
-                message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\` `
+                message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${fullCommandName(this)}\` `
                 message += "pour obtenir les horaires de la station de votre choix. Merci de votre compréhension."
                 return message;
             }
         } else {
             if (error.type === PathBasedRetrievalErrorType.INVALID_PATH_FORMAT) {
                 let message = "⚠️  Erreur innatendue.\n"
-                message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${this.commandName} ${this.subCommandName}\` pour obtenir les horaires.`
+                message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${fullCommandName(this)}\` pour obtenir les horaires.`
                 return message
             } else if (error.type === PathBasedRetrievalErrorType.NO_MATCHING_IDS) {
                 let message = "⚠️  Erreur : Évolution des données\n"
-                message += "Un changement interne à Mannele ou à la CTS nécessite que vous utilisiez à "
-                message += `nouveau la commande \`/${this.commandName} ${this.subCommandName}\` `
+                message += "Un changement interne de Mannele ou aux données de la CTS nécessite que "
+                message += `vous utilisiez à nouveau la commande \`/${fullCommandName(this)}\` `
                 message += "pour accéder aux informations liées à votre station. Merci de votre compréhension.\n"
                 return message;
             } else {
                 let message = "⚠️  Erreur inconnue\n"
-                message += `Vous pouvez tenter d'utiliser à nouveau la commande \`/${this.commandName} `
-                // TODO: What if subCommandName is undefined?
-                message += `${this.subCommandName}\` pour tenter d'obtenir des horaires.`
+                message += "Vous pouvez tenter d'utiliser à nouveau la commande "
+                message += `\`/${fullCommandName(this)}\`pour tenter d'obtenir des horaires.`
                 return message;
             }
         }
