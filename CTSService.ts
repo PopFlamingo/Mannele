@@ -793,17 +793,24 @@ export class CTSService {
                 "**__Je peux toutefois me tromper et les données peuvent également être erronées.__**";
         }
 
-        if (locale === "fr") {
-            final += "\n*Certains horaires peuvent être théoriques - Exactitude non garantie ([voir plus](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
-        } else if (locale === "en-US" || locale === "en-GB") {
-            final += "\n*Some schedules may be theoretical - Accuracy not guaranteed ([see more](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
-        } else {
-            final += "\n*Certains horaires peuvent être théoriques - Exactitude non garantie ([voir plus](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
-            final += "\n*Some schedules may be theoretical - Accuracy not guaranteed ([see more](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
-
-        }
+        final += this.getLocalizedAccuracyWarnings(locale)
 
         return final;
+    }
+
+    // We want to fator out the locale warnings part
+    getLocalizedAccuracyWarnings(locale: string | null): string {
+        // TODO: Maybe avoid prepending a newline
+        let message = "";
+        if (locale === "fr") {
+            message += "\n*Certains horaires peuvent être théoriques - Exactitude non garantie ([voir plus](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
+        } else if (locale === "en-US" || locale === "en-GB") {
+            message += "\n*Some schedules may be theoretical - Accuracy not guaranteed ([see more](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
+        } else {
+            message += "\n*Certains horaires peuvent être théoriques - Exactitude non garantie ([voir plus](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
+            message += "\n*Some schedules may be theoretical - Accuracy not guaranteed ([see more](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
+        }
+        return message;
     }
 
     /**

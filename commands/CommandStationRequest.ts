@@ -326,7 +326,6 @@ export default class CommandStationRequest implements CommandDescriptor {
             stationPath = error.stationPath
             error = error.warpedError
         }
-        // TODO: Update error handling here
         let anyError = error as any;
         if (error instanceof PathBasedRetrievalError) {
             return this.handlePathBasedRetrievalError(error);
@@ -338,9 +337,9 @@ export default class CommandStationRequest implements CommandDescriptor {
             let text = "Les horaires sont indisponibles, cela signifie ";
             text += "*peut être* qu'il n'y a pas de passages de bus ou trams ";
             text += "pour le moment, ou alors simplement que les serveurs de la CTS ont un problème.";
-            text +=
-                "\n\n*Exactitude non garantie - Accuracy not guaranteed - ([en savoir plus/see more](https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0))*";
+            text += `\n${services.cts.getLocalizedAccuracyWarnings(null)}`;
             // TODO: Dynamically localize this message (try to see if others need to be dyn. localized too)
+            // This means we need to get the locale from the interaction, requiring modifying the CommandDescriptor interface
             return {
                 content: text,
                 components: stationPath === undefined ? [] : CommandStationRequest.makeMessageComponents(stationPath)
