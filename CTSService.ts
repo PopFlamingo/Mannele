@@ -25,7 +25,6 @@ import {
     VehicleMode,
 } from "./SIRITypes.js";
 import { emojiForStation } from "./station_emojis.js";
-import { hash } from "./hash.js";
 
 // Create and export an enum that stores either tram or bus
 export enum TransportType {
@@ -187,11 +186,15 @@ export class NamedStation {
     @jsonMember
     userReadableName: string;
 
+    @jsonMember
+    normalizedName: string;
+
     @jsonArrayMember(ProbableExtendedStation)
     extendedStations: ProbableExtendedStation[];
 
-    constructor(userReadableName: string) {
+    constructor(userReadableName: string, noramalizedName: string) {
         this.userReadableName = userReadableName;
+        this.normalizedName = noramalizedName;
         this.extendedStations = [];
     }
 
@@ -323,21 +326,20 @@ export class CTSService {
 
         let normalizedNameToStation = await CTSService.getNamedStations(ctsAPI);
 
-        return new CTSService(ctsAPI, normalizedNameToStation.value, normalizedNameToStation.hash);
+        return new CTSService(ctsAPI, normalizedNameToStation);
     }
 
-    private static async getNamedStations(ctsAPI: AxiosInstance): Promise<{ value: Map<string, NamedStation>, hash: string }> {
+    private static async getNamedStations(ctsAPI: AxiosInstance): Promise<Map<string, NamedStation>> {
         let geoGouvAPI = axios.create({
             baseURL: "https://api-adresse.data.gouv.fr",
             timeout: 8000,
         });
 
         let normalizedNameToStation = new Map<string, NamedStation>();
-        let hashValue: string;
 
         try {
             if (process.env.LOAD_STOPS_FROM_CACHE === "YES") {
-                console.log("LOAD_STOPS_FROM_CACHE=\"YES\", do not use in production");
+                console.log("\x1b[31m%s\x1b[0m", "LOAD_STOPS_FROM_CACHE=\"YES\", do not use in production");
                 throw new Error("LOAD_FROM_CACHE");
             }
             let rawResponse = await ctsAPI.get("stoppoints-discovery");
@@ -370,7 +372,7 @@ export class CTSService {
                 let namedStation = normalizedNameToStation.get(normalizedName);
                 // If the named station doesn't exist yet, create it
                 if (namedStation === undefined) {
-                    namedStation = new NamedStation(name);
+                    namedStation = new NamedStation(name, normalizedName);
                     namedStation.addStop(logicalStopCode, stop.location);
                     normalizedNameToStation.set(normalizedName, namedStation);
                 } else {
@@ -452,7 +454,6 @@ export class CTSService {
             const saveData = new CachedStations(normalizedNameToStation, new Date());
             const savedResultsSerializer = new TypedJSON(CachedStations);
             const savedResults = savedResultsSerializer.stringify(saveData);
-            hashValue = await hash(JSON.stringify(normalizedNameToStation))
             // Save to ./data/last-query-results.json
             fs.writeFileSync(
                 "./resources/last-query-results.json",
@@ -474,7 +475,7 @@ export class CTSService {
             const savedResults = savedResultsSerializer.parse(stringValue);
             if (savedResults !== undefined) {
                 normalizedNameToStation = savedResults.normalizedNameToStation;
-                hashValue = await hash(JSON.stringify(normalizedNameToStation))
+                console.log(`Loaded ${normalizedNameToStation.size} stations from cache`);
                 // Same as above but this time store full date + time using the argument of the function
                 process.env.LAST_STOP_UPDATE = CTSService.formatDateFR(savedResults.date)
 
@@ -483,9 +484,7 @@ export class CTSService {
             }
         }
 
-        console.log("Stations hash is " + hashValue)
-
-        return { value: normalizedNameToStation, hash: hashValue };
+        return normalizedNameToStation;
     }
 
     /**
@@ -554,68 +553,68 @@ export class CTSService {
     private constructor(
         api: AxiosInstance,
         normalizedNameToStation: Map<string, NamedStation>,
-        hash: string
     ) {
         this.api = api;
         this.normalizedNameToStation = normalizedNameToStation;
-        this.hash = hash
     }
 
     private api: AxiosInstance;
 
     private normalizedNameToStation: Map<string, NamedStation> = new Map();
 
-    hash: string;
-
     getExtendedStationFromPath(path: string): { name: string, value: ProbableExtendedStation, locationDescription: string | undefined } {
-        // The path is of the form normalizedNameToStationIdx/probableExtendedStationIdx|hash
-        // If the hash is not the same as the one we have, we throw an appropriate error
-        // Finally, if the path is invalid, we return undefined
-        const pathParts = path.split("|");
-        if (pathParts.length !== 2) {
-            throw new Error("INVALID_PATH_FORMAT");
+        let normalizedNameStr: string;
+        let idsStr: string | undefined;
+        [normalizedNameStr, idsStr] = path.split("|");
+
+        if (idsStr === undefined) {
+            throw new PathBasedRetrievalError(
+                PathBasedRetrievalErrorType.INVALID_PATH_FORMAT,
+                `Invalid path ("${path}")`
+            )
         }
 
-        const hash = pathParts[1];
-        if (hash !== this.hash) {
-            throw new Error("HASH_MISMATCH");
+        const namedStation = this.normalizedNameToStation.get(normalizedNameStr);
+        const ids = new Set(idsStr.split(",").map((value) => CTSService.base64Decode(value)));
+
+        if (namedStation === undefined) {
+            for (let namedStation of this.normalizedNameToStation.values()) {
+                for (let extendedStation of namedStation.extendedStations) {
+                    // Now check if the extended station has the same ids as the ones in the path
+                    if (ids.size === extendedStation.logicStations.length &&
+                        extendedStation.logicStations.every((value) => ids.has(value.logicStopCode))) {
+                        throw new NameNotFoundError(namedStation.userReadableName)
+                    }
+                }
+            }
+            throw new NameNotFoundError(null)
         }
 
-        // Now we split the first part of the path
-        const stationAndIdx = pathParts[0].split("/");
-        if (stationAndIdx.length !== 2) {
-            throw new Error("INVALID_PATH_FORMAT");
+        for (let extendedStation of namedStation.extendedStations) {
+            // extendedStation.logicStations is an array of objects with a logicStopCode property
+            // Check if both arrays are equal
+            if (ids.size === extendedStation.logicStations.length &&
+                extendedStation.logicStations.every((value) => ids.has(value.logicStopCode))) {
+                let locationDescription: string | undefined;
+
+                if (namedStation.extendedStations.length > 1) {
+                    locationDescription = extendedStation.distinctiveLocationDescription;
+                } else {
+                    locationDescription = undefined;
+                }
+
+                return {
+                    name: namedStation.userReadableName,
+                    value: extendedStation,
+                    locationDescription: locationDescription
+                };
+            }
         }
 
-        const stationIdx = parseInt(stationAndIdx[0]);
-        const probableExtendedStationIdx = parseInt(stationAndIdx[1]);
-
-        // Check that the indexes are valid
-        if (isNaN(stationIdx) || isNaN(probableExtendedStationIdx)) {
-            throw new Error("INVALID_PATH_FORMAT");
-        }
-
-        // Now we get the station, check that the indexes are valid and return the probable extended station
-        const station = Array.from(this.normalizedNameToStation.values())[stationIdx];
-        if (station === undefined) {
-            throw new Error("INVALID_TOP_LEVEL_INDEX");
-        }
-
-        const probableExtendedStation = station.extendedStations[probableExtendedStationIdx];
-
-        if (probableExtendedStation === undefined) {
-            throw new Error("INVALID_SECOND_LEVEL_INDEX");
-        }
-
-        let locationDescription: string | undefined;
-
-        if (station.extendedStations.length > 1) {
-            locationDescription = probableExtendedStation.distinctiveLocationDescription;
-        } else {
-            locationDescription = undefined;
-        }
-
-        return { name: station.userReadableName, value: probableExtendedStation, locationDescription: locationDescription };
+        throw new PathBasedRetrievalError(
+            PathBasedRetrievalErrorType.NO_MATCHING_IDS,
+            `No matching ids for path "${path}"`
+        )
     }
 
     getStationAndIdxFromNormalizedName(normalizedName: string): { station: NamedStation, idx: number } | undefined {
@@ -631,8 +630,7 @@ export class CTSService {
 
     async updateNormalizedNameToStation() {
         const stationsFetchResult = await CTSService.getNamedStations(this.api);
-        this.normalizedNameToStation = stationsFetchResult.value;
-        this.hash = stationsFetchResult.hash
+        this.normalizedNameToStation = stationsFetchResult;
     }
 
     static aggregateRawVisitSchedules(rawSchedule: LaneVisitsSchedule[]): ConsumableSchedule.Lane[] {
@@ -795,17 +793,24 @@ export class CTSService {
                 "**__Je peux toutefois me tromper et les données peuvent également être erronées.__**";
         }
 
-        if (locale === "fr") {
-            final += "\n*Certains horaires peuvent être théoriques - Exactitude non garantie ([voir plus](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
-        } else if (locale === "en-US" || locale === "en-GB") {
-            final += "\n*Some schedules may be theoretical - Accuracy not guaranteed ([see more](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
-        } else {
-            final += "\n*Certains horaires peuvent être théoriques - Exactitude non garantie ([voir plus](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
-            final += "\n*Some schedules may be theoretical - Accuracy not guaranteed ([see more](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
-
-        }
+        final += this.getLocalizedAccuracyWarnings(locale)
 
         return final;
+    }
+
+    // We want to fator out the locale warnings part
+    getLocalizedAccuracyWarnings(locale: string | null): string {
+        // TODO: Maybe avoid prepending a newline
+        let message = "";
+        if (locale === "fr") {
+            message += "\n*Certains horaires peuvent être théoriques - Exactitude non garantie ([voir plus](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
+        } else if (locale === "en-US" || locale === "en-GB") {
+            message += "\n*Some schedules may be theoretical - Accuracy not guaranteed ([see more](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
+        } else {
+            message += "\n*Certains horaires peuvent être théoriques - Exactitude non garantie ([voir plus](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
+            message += "\n*Some schedules may be theoretical - Accuracy not guaranteed ([see more](<https://gist.github.com/PopFlamingo/74fe805c9017d81f5f8baa7a880003d0>))*";
+        }
+        return message;
     }
 
     /**
@@ -1048,21 +1053,34 @@ export class CTSService {
         }
     }
 
+    // Encode with no padding
+    private static base64Encode(str: string): string {
+        return Buffer.from(str).toString("base64").replace(/=/g, "");
+    }
+
+    // Decode
+    private static base64Decode(str: string): string {
+        return Buffer.from(str, "base64").toString("utf8");
+    }
+
     async searchFlattenedStation(searchedStationName: string): Promise<FlattenedMatch[]> {
         let searchResult = (await this.searchStationNew(searchedStationName)) || [];
 
         // We will now flatten the array of matches, what this means is that
         // we are going to take all extended stations and put them in a single array
         let flattenedMatches: FlattenedMatch[] = [];
-        for (let [resultIdx, { station: matchingStation, idx: topIdx }] of searchResult.stationsAndIndices.entries()) {
-            for (let [secondIdx, extendedStation] of matchingStation.extendedStations.entries()) {
+        for (let [resultIdx, { station: matchingStation, idx: _ }] of searchResult.stationsAndIndices.entries()) {
+            for (let extendedStation of matchingStation.extendedStations) {
+                let logicStopCodesStr = extendedStation.logicStations.map(
+                    (logicStation) => CTSService.base64Encode(logicStation.logicStopCode)
+                ).join(",");
                 flattenedMatches.push({
                     logicStations: extendedStation.logicStations,
                     stationName: matchingStation.userReadableName,
                     geoDescription:
                         extendedStation.distinctiveLocationDescription,
                     isExactMatch: resultIdx == 0 && searchResult.firstMatchIsHighConfidence,
-                    path: `${topIdx}/${secondIdx}|${this.hash}`,
+                    path: `${matchingStation.normalizedName}|${logicStopCodesStr}`,
                 });
             }
         }
@@ -1152,4 +1170,41 @@ export class CTSService {
             firstMatchIsHighConfidence: false
         };
     }
+}
+
+
+export enum PathBasedRetrievalErrorType {
+    INVALID_PATH_FORMAT,
+    NAME_NOT_FOUND,
+    NO_MATCHING_IDS,
+}
+
+export class PathBasedRetrievalError extends Error {
+    constructor(type: PathBasedRetrievalErrorType, message: string) {
+        super(message)
+        this.type = type;
+        this.name = this.constructor.name;
+        Error.captureStackTrace && Error.captureStackTrace(this, this.constructor);
+    }
+
+    type: PathBasedRetrievalErrorType;
+}
+
+/**
+ * Represents an error that occurs when a station name cannot be found.
+ */
+export class NameNotFoundError extends PathBasedRetrievalError {
+    /**
+     * Creates a new instance of the NameNotFoundError class.
+     * @param hint A hint that indicates the name of a station that has the same ID(s) but a different name.
+     */
+    constructor(hint: string | null) {
+        super(PathBasedRetrievalErrorType.NAME_NOT_FOUND, "Couldn't find a station with the requested name");
+        this.hint = hint;
+    }
+
+    /**
+     * A hint that indicates the name of a station that has the same ID(s) but a different name.
+     */
+    hint: string | null;
 }

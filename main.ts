@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Client, GatewayIntentBits, CommandInteraction, ActivityType } from "discord.js";
+import { BaseMessageOptions, Client, GatewayIntentBits, CommandInteraction, ActivityType, ButtonInteraction, CacheType } from "discord.js";
 import { BotServices } from "./BotServices.js";
 import { CommandDescriptor, isCommandDescriptor } from "./CommandDescriptor.js";
 import { CTSService } from "./CTSService.js";
@@ -100,17 +100,91 @@ async function defaultErrorHandler(
     let errorMessage = "Une erreur est survenue ! :slight_frown:\n";
     errorMessage +=
         "Cela peut être une erreur interne ou provenir d'un service que j'ai tenté de contacter.\n";
-    await interaction.editReply(errorMessage);
+    await interaction.editReply({
+        content: errorMessage,
+        components: [],
+    });
+}
+
+async function defaultButtonErrorHandler(
+    error: unknown,
+    interaction: ButtonInteraction<CacheType>
+) {
+    console.error(error);
+    let errorMessage = "Une erreur est survenue ! :slight_frown:\n";
+    errorMessage +=
+        "Cela peut être une erreur interne ou provenir d'un service que j'ai tenté de contacter.\n";
+    interaction.editReply({
+        content: errorMessage,
+        components: [],
+    })
 }
 
 // Handle slash commands
 client.on("interactionCreate", async (interaction) => {
-    if (!interaction.isChatInputCommand()) {
+    let isEphemeral =
+        ephemeralOnlyServers.indexOf(interaction.guildId || "") !== -1;
+    if (interaction.isButton()) {
+        const commandAndSubcommandName = interaction.message.interaction?.commandName
+        if (commandAndSubcommandName === undefined) {
+            return
+        }
+        const split = commandAndSubcommandName.split(" ")
+        const command = split[0]
+        let subcommand: string | null = null
+
+        if (split.length == 2) {
+            subcommand = split[1]
+        } else if (split.length > 2) {
+            console.error("Unexpected command name format")
+            return
+        }
+        const key = `${command}|${subcommand}`;
+        const commandDescriptor = commands.get(key);
+        if (commandDescriptor === undefined) {
+            console.error(`Command descriptor for ${key} not found`)
+            return
+        }
+        if (commandDescriptor.handleButton === undefined) {
+            console.error(`Command descriptor for ${key} does not have a handleButton method`)
+            return
+        }
+        await interaction.deferUpdate();
+        try {
+            await commandDescriptor.handleButton(interaction, botServices)
+        } catch (error) {
+            if (commandDescriptor.handleButtonError !== undefined) {
+                try {
+                    let customErrorMessage =
+                        await commandDescriptor.handleButtonError(
+                            error,
+                            botServices
+                        );
+                    if (typeof customErrorMessage === "string") {
+                        await interaction.editReply({
+                            content: customErrorMessage,
+                            components: [],
+                        });
+
+                    } else {
+                        await interaction.editReply(customErrorMessage);
+                    }
+                } catch (error) {
+                    await defaultButtonErrorHandler(error, interaction);
+                }
+            } else {
+                await defaultButtonErrorHandler(error, interaction);
+            }
+        }
+
+
+        return;
+    } else if (!interaction.isChatInputCommand()) {
+        // It seems that even interactions that are collected using DiscordJS collectors are
+        // received here
         return;
     }
 
-    let isEphemeral =
-        ephemeralOnlyServers.indexOf(interaction.guildId || "") !== -1;
     await interaction.deferReply({ ephemeral: isEphemeral });
     let command = interaction.commandName;
     let subcommand: string | null =

@@ -5,7 +5,6 @@ import {
     Routes,
     REST
 } from "discord.js";
-import { stationCodes } from "./data.js";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -27,50 +26,18 @@ if (clientId == null) {
     throw new Error("CLIENT_ID environment variable not set");
 }
 
-function makeStationTuplesArray(): { name: string, value: string }[] {
-    // Get all keys of the stationCodes object
-    let stationCodesKeys = Object.keys(stationCodes);
-    // Sort them alphabetically
-    stationCodesKeys.sort();
-    // Create an array of tuples
-    let stationTuples: { name: string, value: string }[] = [];
-    for (let i = 0; i < stationCodesKeys.length; i++) {
-        stationTuples.push({ name: stationCodesKeys[i], value: stationCodesKeys[i] });
-    }
-
-    return stationTuples;
-}
-
 const commands = [
     new SlashCommandBuilder()
         .setName("horaires")
         .setDescription("Horaires en direct pour la CTS")
-        .addSubcommand(
-            new SlashCommandSubcommandBuilder()
-                .setName("station")
-                .setDescription(
-                    "Affiche les horaires pour n'importe quelle station (données CTS)"
-                )
-                .addStringOption(
-                    new SlashCommandStringOption()
-                        .setName("station")
-                        .setDescription("Station à rechercher et afficher")
-                        .setRequired(true)
-                )
+        .setDescription(
+            "Affiche les horaires pour n'importe quelle station (données CTS)"
         )
-        .addSubcommand(
-            new SlashCommandSubcommandBuilder()
-                .setName("u")
-                .setDescription(
-                    "Affiche les horaires pour une station aux alentours de l'Unistra (données CTS)"
-                )
-                .addStringOption(
-                    new SlashCommandStringOption()
-                        .setName("station")
-                        .setDescription("Nom de la station")
-                        .addChoices(...makeStationTuplesArray())
-                        .setRequired(true)
-                )
+        .addStringOption(
+            new SlashCommandStringOption()
+                .setName("station")
+                .setDescription("Station à rechercher et afficher")
+                .setRequired(true)
         ),
 
     new SlashCommandBuilder()
