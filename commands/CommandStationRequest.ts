@@ -56,7 +56,7 @@ export default class CommandStationRequest implements CommandDescriptor {
         let stationName = interaction.options.getString("station");
         // Save some stats
         services.stats.increment(
-            "COMMAND(horaires,station)",
+            "COMMAND(horaires/command)",
             interaction.user.id
         );
 
@@ -282,6 +282,10 @@ export default class CommandStationRequest implements CommandDescriptor {
         interaction: ButtonInteraction<CacheType>,
         services: BotServices
     ): Promise<void> => {
+        services.stats.increment(
+            "COMMAND(horaires/button)",
+            interaction.user.id
+        );
         const path = interaction.customId
         let { name: readableName, value: station, locationDescription: locationDescription } =
             services.cts.getExtendedStationFromPath(path);
